@@ -6,6 +6,7 @@
         <span class="search-icon">🔍</span>
         <input 
           v-model="searchQuery"
+          @input="fetchPosts" 
           type="text" 
           placeholder="검색어를 입력하세요 (제목, 내용)" 
           class="search-input"
@@ -15,7 +16,6 @@
       <div class="filter-actions">
         <select v-model="sortBy" class="sort-select">
           <option value="latest">최신순</option>
-          <option value="views">조회순</option>
         </select>
         <button class="filter-btn">⚙️ 필터</button>
       </div>
@@ -23,6 +23,8 @@
 
     <!-- 게시글 목록 -->
     <div class="post-list">
+      <div v-if="posts.length === 0" class="no-posts">게시글이 없습니다. 첫 글을 작성해 보세요!</div>
+      
       <div v-for="post in posts" :key="post.id" class="post-item">
         <!-- 이미지 플레이스홀더 -->
         <div class="post-thumbnail">🖼️</div>
@@ -56,59 +58,177 @@
     <div class="board-footer">
       <div class="pagination">
         <button class="page-arrow">‹</button>
-        <button 
-          v-for="page in 5" 
-          :key="page"
-          :class="['page-num', { active: page === 1 }]"
-        >
-          {{ page }}
-        </button>
+        <button class="page-num active">1</button>
         <button class="page-arrow">›</button>
       </div>
 
-      <button class="write-btn">글쓰기</button>
+      <button @click="showWriteModal = true" class="write-btn">글쓰기</button>
+    </div>
+
+    <!-- 글쓰기 레이어 팝업 (모달) -->
+    <div v-if="showWriteModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>새 게시글 작성</h3>
+        <input v-model="newPost.author" type="text" placeholder="작성자명" class="modal-input" />
+        <input v-model="newPost.title" type="text" placeholder="제목을 입력하세요" class="modal-input" />
+        <textarea v-model="newPost.summary" placeholder="내용을 입력하세요" class="modal-textarea"></textarea>
+        
+        <div class="modal-buttons">
+          <button @click="submitPost" class="btn-primary">등록</button>
+          <button @click="showWriteModal = false" class="btn-secondary">취소</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const API_URL = 'http://localhost:8000/api/posts' // FastAPI 서버 주소
 
 const searchQuery = ref('')
 const sortBy = ref('latest')
+const posts = ref([])
+const showWriteModal = ref(false)
 
-const posts = ref([
-  {
-    id: 1,
-    title: '구미 금오산 등산 코스 추천!',
-    summary: '초보자도 쉽게 다녀올 수 있는 코스 정리했어요. 경치도 좋고 강력 추천합니다 :)',
-    author: '산타는곰',
-    date: '2024.07.14',
-    views: 325,
-    likes: 23
-  },
-  {
-    id: 2,
-    title: '구미 인생 맛집 BEST 5',
-    summary: '현지인이 자주 가는 찐맛집들만 모아봤습니다!',
-    author: '맛집헌터',
-    date: '2024.07.13',
-    views: 187,
-    likes: 15
-  },
-  {
-    id: 3,
-    title: '선산 꽃감 축제 다녀왔어요!',
-    summary: '곶감도 맛있고 볼거리도 많았던 축제 후기입니다. 주차 정보도 공유해요!',
-    author: '경북여행가',
-    date: '2024.07.12',
-    views: 412,
-    likes: 31
+// 새 게시글 폼 바인딩 변수
+const newPost = ref({
+  title: '',
+  summary: '',
+  author: '',
+  date: ''
+})
+
+// 1. 게시글 목록 불러오기 (GET API 연동)
+const fetchPosts = async () => {
+  try {
+    const response = await axios.get(API_URL, {
+      params: { search: searchQuery.value }
+    })
+    posts.value = response.data
+  } catch (error) {
+    console.error('게시글 로드 실패:', error)
   }
-])
+}
+
+// 2. 게시글 새로 등록하기 (POST API 연동)
+const submitPost = async () => {
+  if (!newPost.value.title || !newPost.value.summary || !newPost.value.author) {
+    alert('모든 항목을 입력해주세요!')
+    return
+  }
+
+  // 오늘 날짜 구하기 (YYYY.MM.DD)
+  const today = new Date()
+  const formattedDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`
+  newPost.value.date = formattedDate
+
+  try {
+    await axios.post(API_URL, newPost.value)
+    alert('게시글이 성공적으로 등록되었습니다.')
+    
+    // 폼 초기화 및 모달 닫기
+    newPost.value = { title: '', summary: '', author: '', date: '' }
+    showWriteModal.value = false
+    
+    // 목록 새로고침
+    fetchPosts()
+  } catch (error) {
+    console.error('게시글 등록 실패:', error)
+  }
+}
+
+// 컴포넌트가 마운트될 때 첫 로드 진행
+onMounted(() => {
+  fetchPosts()
+})
 </script>
 
 <style scoped>
+/* 기존 스타일은 그대로 유지하고 아래 모달 팝업 스타일을 추가합니다 */
+
+.no-posts {
+  padding: 40px 0;
+  text-align: center;
+  color: #868e96;
+  font-size: 14px;
+}
+
+/* 모달 스타일 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.modal-content {
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 800;
+}
+.modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  outline: none;
+  font-size: 14px;
+}
+.modal-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: 120px;
+  padding: 12px;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  outline: none;
+  font-size: 14px;
+  resize: none;
+}
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.btn-primary {
+  background-color: #111;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.btn-secondary {
+  background-color: #e9ecef;
+  color: #495057;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* 기존 PostBoard.vue의 스타일 ... */
 .board-container {
   display: flex;
   flex-direction: column;
@@ -210,7 +330,7 @@ const posts = ref([
 }
 .post-header {
   display: flex;
-  justify-between: space-between;
+  justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
 }
@@ -330,10 +450,9 @@ const posts = ref([
   background-color: #e2e6ea;
 }
 
-/* 📱 모바일 최적화: 게시판을 콤팩트하고 슬림하게 조정 */
 @media (max-width: 640px) {
   .filter-bar {
-    flex-direction: row; /* 검색창과 필터 한 줄 유지 */
+    flex-direction: row;
     gap: 8px;
     margin-bottom: 12px;
   }
@@ -352,32 +471,32 @@ const posts = ref([
     border-radius: 8px;
   }
   .post-item {
-    flex-direction: row; /* 세로 누적을 방지하고 콤팩트한 가로 배치 유지 */
+    flex-direction: row;
     gap: 12px;
     padding: 12px 0;
   }
   .post-thumbnail {
-    width: 64px; /* 썸네일 크기 대폭 축소 */
+    width: 64px;
     height: 64px;
     font-size: 20px;
     border-radius: 8px;
   }
   .post-title {
-    font-size: 14px; /* 글 제목 축소 */
+    font-size: 14px;
   }
   .post-views {
     font-size: 10px;
   }
   .post-summary {
-    font-size: 11px; /* 글 요약 축소 및 여백 보정 */
+    font-size: 11px;
     margin: 4px 0;
-    -webkit-line-clamp: 1; /* 글 요약을 1줄만 보이도록 하여 영역 절약 */
+    -webkit-line-clamp: 1;
   }
   .post-meta {
     font-size: 10px;
   }
   .action-btn {
-    padding: 3px 6px; /* 버튼 패딩 극소화 */
+    padding: 3px 6px;
     font-size: 10px;
     border-radius: 4px;
   }
