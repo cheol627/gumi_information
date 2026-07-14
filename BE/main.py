@@ -5,22 +5,17 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-# 기존 데이터베이스 파일 (tour.db) 유지
 DATABASE_URL = "sqlite:///./tour.db"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 # ==========================================
-# 1. [기존] 여행지 데이터 모델
+# 1. 여행지 데이터 모델 (기존 유지)
 # ==========================================
 class Place(Base):
     __tablename__ = "places"
-
     id = Column(Integer, primary_key=True, index=True)
     content_id = Column(String, unique=True, index=True)
     content_type_id = Column(Integer, index=True)
@@ -49,9 +44,8 @@ class Place(Base):
     modifiedtime = Column(String)
     source_region = Column(String)
 
-
 # ==========================================
-# 2. [신규 추가] 커뮤니티 게시판 데이터 모델
+# 2. 커뮤니티 게시판 데이터 모델 (비밀번호 추가)
 # ==========================================
 class Post(Base):
     __tablename__ = "posts"
@@ -63,19 +57,25 @@ class Post(Base):
     date = Column(String, nullable=False)
     views = Column(Integer, default=0)
     likes = Column(Integer, default=0)
+    password = Column(String, nullable=False)  # 🔥 수정/삭제용 비밀번호 필드 추가
 
-
-# 데이터베이스 테이블 생성 (기존 테이블은 유지되고 신규 'posts' 테이블만 추가로 자동 생성됨)
 Base.metadata.create_all(bind=engine)
 
 # ==========================================
-# 3. Pydantic 스키마 정의 (데이터 검증용)
+# 3. Pydantic 스키마 정의
 # ==========================================
 class PostCreate(BaseModel):
     title: str
     summary: str
     author: str
     date: str
+    password: str  # 생성 시 비밀번호 필수
+
+class PostUpdate(BaseModel):
+    title: str
+    summary: str
+    author: str
+    password: str  # 수정 시 본인 인증용 비밀번호 확인
 
 class PostResponse(BaseModel):
     id: int
@@ -88,7 +88,6 @@ class PostResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
 
 # ==========================================
 # 4. FastAPI 앱 설정 및 CORS
@@ -113,37 +112,30 @@ def get_db():
 def place_to_dict(place):
     return {col.name: getattr(place, col.name) for col in Place.__table__.columns}
 
-
-# ==========================================
-# 5. API 엔드포인트
-# ==========================================
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-# [기존] 여행지 목록 API
+# [기존] 여행지 API 생략 (그대로 유지됨)
 @app.get("/places")
 def list_places(keyword: Optional[str] = Query(None), db: Session = Depends(get_db)):
     query = db.query(Place)
     if keyword:
         query = query.filter(Place.title.contains(keyword))
-    places = query.order_by(Place.title).all()
-    return [place_to_dict(p) for p in places]
+    return [place_to_dict(p) for p in query.order_by(Place.title).all()]
 
-# [기존] 여행지 단건 조회 API
 @app.get("/places/{content_id}")
 def get_place(content_id: str, db: Session = Depends(get_db)):
     place = db.query(Place).filter(Place.content_id == content_id).first()
-    if not place:
-        return {"detail": "not found"}
+    if not place: return {"detail": "not found"}
     return place_to_dict(place)
 
 
 # ------------------------------------------
-# [신규 추가] 커뮤니티 API 엔드포인트
+# 락인(CRUD) 커뮤니티 API 엔드포인트
 # ------------------------------------------
 
-# 1. 게시글 목록 조회 (최신 ID 순으로 정렬)
+# 1. 목록 조회
 @app.get("/api/posts", response_model=List[PostResponse])
 def read_posts(search: str = "", db: Session = Depends(get_db)):
     query = db.query(Post)
@@ -151,7 +143,20 @@ def read_posts(search: str = "", db: Session = Depends(get_db)):
         query = query.filter(Post.title.contains(search) | Post.summary.contains(search))
     return query.order_by(Post.id.desc()).all()
 
-# 2. 게시글 작성
+# 2. 상세 조회 및 조회수 증가
+@app.get("/api/posts/{post_id}", response_model=PostResponse)
+def get_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글이 없습니다.")
+    
+    # 조회수 1 증가 후 저장
+    post.views += 1
+    db.commit()
+    db.refresh(post)
+    return post
+
+# 3. 게시글 작성
 @app.post("/api/posts", response_model=PostResponse)
 def create_post(post_data: PostCreate, db: Session = Depends(get_db)):
     new_post = Post(
@@ -159,6 +164,7 @@ def create_post(post_data: PostCreate, db: Session = Depends(get_db)):
         summary=post_data.summary,
         author=post_data.author,
         date=post_data.date,
+        password=post_data.password,
         views=0,
         likes=0
     )
@@ -166,3 +172,36 @@ def create_post(post_data: PostCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_post)
     return new_post
+
+# 4. 게시글 수정 (비밀번호 검증)
+@app.put("/api/posts/{post_id}", response_model=PostResponse)
+def update_post(post_id: int, post_data: PostUpdate, db: Session = Depends(get_db)):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    
+    # 비밀번호 비교 검증
+    if post.password != post_data.password:
+        raise HTTPException(status_code=403, detail="비밀번호가 일치하지 않습니다.")
+    
+    post.title = post_data.title
+    post.summary = post_data.summary
+    post.author = post_data.author
+    
+    db.commit()
+    db.refresh(post)
+    return post
+
+# 5. 게시글 삭제 (비밀번호 검증을 쿼리 스트링 혹은 바디 대용으로 처리하기 위해 명세 고도화)
+@app.delete("/api/posts/{post_id}")
+def delete_post(post_id: int, password: str = Query(...), db: Session = Depends(get_db)):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    
+    if post.password != password:
+        raise HTTPException(status_code=403, detail="비밀번호가 일치하지 않습니다.")
+        
+    db.delete(post)
+    db.commit()
+    return {"message": "삭제 완료"}
