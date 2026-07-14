@@ -44,6 +44,9 @@ const activeRegion = ref('all')
 const map = ref(null)
 const markerGroup = ref(null)
 const mapBounds = ref(null)
+const displayedPlaces = computed(() => {
+  return filteredPlaces.value.slice(0, 100)
+})
 
 function mapTypeFromCats(cat1, cat2, cat3) {
   const txt = `${cat1||''} ${cat2||''} ${cat3||''}`
@@ -87,19 +90,29 @@ const updateMarkers = () => {
 
   const visiblePlaces = filteredPlaces.value
 
-  console.log(
-    '현재 지도에 보이는 장소 수:',
-    visiblePlaces.length
-  )
+const MAX_MARKERS = 100
 
-  visiblePlaces.forEach(place => {
-    L.marker([place.lat, place.lng])
-      .bindPopup(`
-        <strong>${place.name}</strong><br/>
-        ${place.region || ''}
-      `)
-      .addTo(markerGroup.value)
-  })
+const placesToShow =
+  visiblePlaces.length > MAX_MARKERS
+    ? visiblePlaces.slice(0, MAX_MARKERS)
+    : visiblePlaces
+
+console.log(
+  `현재 지도에 보이는 장소: ${visiblePlaces.length}개`
+)
+
+console.log(
+  `실제 표시되는 마커: ${placesToShow.length}개`
+)
+
+placesToShow.forEach(place => {
+  L.marker([place.lat, place.lng])
+    .bindPopup(`
+      <strong>${place.name}</strong><br/>
+      ${place.region || ''}
+    `)
+    .addTo(markerGroup.value)
+})
 }
 
 const initMap = () => {
@@ -285,8 +298,9 @@ watch(filteredPlaces, () => {
   <div v-else class="place-cards">
     <article
       class="place-card"
-      v-for="place in filteredPlaces"
+      v-for="place in displayedPlaces"
       :key="place.id"
+>
     >
       <div class="place-icon">🏙️</div>
 
