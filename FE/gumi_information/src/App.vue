@@ -48,13 +48,39 @@ const displayedPlaces = computed(() => {
   return filteredPlaces.value.slice(0, 100)
 })
 
-function mapTypeFromCats(cat1, cat2, cat3) {
-  const txt = `${cat1||''} ${cat2||''} ${cat3||''}`
-  if (txt.includes('음식') || txt.includes('음식점')) return 'food'
-  if (txt.includes('카페')) return 'cafe'
-  if (txt.includes('축제') || txt.includes('공연')) return 'festival'
-  if (txt.includes('숙박') || txt.includes('호텔') || txt.includes('민박')) return 'stay'
-  if (txt.includes('관광') || txt.includes('명소') || txt.includes('레포츠') || txt.includes('문화')) return 'tour'
+function mapTypeFromCats(cat1, cat2, cat3, contentTypeId) {
+  const txt = `${cat1 || ''} ${cat2 || ''} ${cat3 || ''}`.toLowerCase()
+
+  if (txt.includes('음식') || txt.includes('음식점') || contentTypeId === 39) {
+    return 'food'
+  }
+  if (txt.includes('카페') || contentTypeId === 38) {
+    return 'cafe'
+  }
+  if (
+    txt.includes('축제') ||
+    txt.includes('공연') ||
+    contentTypeId === 15
+  ) {
+    return 'festival'
+  }
+  if (
+    txt.includes('숙박') ||
+    txt.includes('호텔') ||
+    txt.includes('민박') ||
+    contentTypeId === 32
+  ) {
+    return 'stay'
+  }
+  if (
+    txt.includes('관광') ||
+    txt.includes('명소') ||
+    txt.includes('레포츠') ||
+    txt.includes('문화') ||
+    [12, 14, 28].includes(contentTypeId)
+  ) {
+    return 'tour'
+  }
   return 'tour'
 }
 
@@ -179,43 +205,38 @@ async function fetchPlaces() {
 
     console.table(data.slice(0, 10))
 
-    places.value = data.map(p => {
-  const lat =
-    p.mapy !== null &&
-    p.mapy !== undefined &&
-    p.mapy !== ''
-      ? Number(p.mapy)
-      : null
+   places.value = data
+  .map(p => {
+    const lat =
+      p.mapy !== null && p.mapy !== undefined && p.mapy !== ''
+        ? Number(p.mapy)
+        : null
+    const lng =
+      p.mapx !== null && p.mapx !== undefined && p.mapx !== ''
+        ? Number(p.mapx)
+        : null
 
-  const lng =
-    p.mapx !== null &&
-    p.mapx !== undefined &&
-    p.mapx !== ''
-      ? Number(p.mapx)
-      : null
+    const type = mapTypeFromCats(
+      p.cat1,
+      p.cat2,
+      p.cat3,
+      Number(p.content_type_id)
+    )
 
-  return {
-  ...p,   // DB 원본 전부 저장
-
-  id: p.id ?? p.content_id ?? null,
-  name: p.title || '',
-  region: p.addr1 || '',
-  type: mapTypeFromCats(
-    p.cat1,
-    p.cat2,
-    p.cat3
-  ),
-  area: p.areacode || '',
-  rating: '0.0',
-  review: 0,
-  lat,
-  lng
-}
-}).filter(
-  p =>
-    Number.isFinite(p.lat) &&
-    Number.isFinite(p.lng)
-)
+    return {
+      ...p,
+      id: p.id ?? p.content_id ?? null,
+      name: p.title || '',
+      region: p.addr1 || '',
+      type,
+      area: p.areacode || '',
+      rating: '0.0',
+      review: 0,
+      lat,
+      lng
+    }
+  })
+  .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))
 
 console.log(
   'places after filter:',
