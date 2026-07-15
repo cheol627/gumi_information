@@ -6,7 +6,7 @@
       <div class="header-content">
         <!-- 로고 -->
         <div class="logo-area" @click="currentMenu = 'home'" style="cursor: pointer;">
-          <span class="logo-text">📍 LocalHub</span>
+          <span class="logo-text"><img :src="logoImg" alt="구미 플레이스 로고" class="logo-image" />어디갈구미?</span>
           <span class="logo-sub">구미/경북 지역 정보 & 커뮤니티</span>
         </div>
         
@@ -167,6 +167,7 @@
 
 <script setup>
 import { ref, nextTick, computed } from 'vue'
+import logoImg from './assets/logo.png' // 경로가 다를 경우 './src/assets/logo.png' 등으로 맞춰주세요.
 import CategorySelector from './components/CategorySelector.vue'
 import PostBoard from './components/PostBoard.vue'
 import LocalInfoView from './views/LocalInfoView.vue'
@@ -298,6 +299,26 @@ const sendMessage = async () => {
 </script>
 
 <style scoped>
+/* 로고 텍스트 전체 영역 정렬 */
+.logo-text {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* 로고 이미지와 글자 사이의 간격 */
+  font-size: 24px; /* 기존 헤더 폰트 크기 유지 */
+  font-weight: 800;
+  color: #111;
+  margin: 0;
+}
+
+/* 🌟 로고 이미지 크기 및 비율 조절 */
+.logo-image {
+  height: 40px;       /* 텍스트 크기(24px)보다 살짝 크게 잡거나 헤더 높이에 맞춰 조절 가능 */
+  width: auto;        /* 가로 비율 자동 유지 */
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .localhub-container {
   min-height: 100vh;
   background-color: #f8f9fa;
