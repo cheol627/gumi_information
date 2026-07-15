@@ -16,7 +16,7 @@ L.Icon.Default.mergeOptions({
 
 const categoryLabels = {
   tour: '관광지',
-  food: '맛집',
+  food: '식당',
   cafe: '카페',
   festival: '축제',
   stay: '숙박',
@@ -73,10 +73,40 @@ const getStarFill = (star) => {
 
 const getTypeLabel = (type) => categoryLabels[type] || '기타'
 
+const createIconImage = (icon) =>
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72">
+      <rect width="72" height="72" rx="16" fill="#f3f4f6"/>
+      <text
+        x="36"
+        y="48"
+        text-anchor="middle"
+        font-size="32"
+      >
+        ${icon}
+      </text>
+    </svg>
+  `)
+
+  const categoryDefaultImageMap = {
+  tour: createIconImage('📍'),
+  food: createIconImage('🍴'),
+  cafe: createIconImage('☕'),
+  festival: createIconImage('🎉'),
+  stay: createIconImage('🏨'),
+  activity: createIconImage('🚴')
+}
+
+const getDefaultImage = (place) => {
+  const type = place?.type || 'tour'
+  return categoryDefaultImageMap[type] || categoryDefaultImageMap.tour
+}
+
 const categories = [
   { id: 'all', label: '전체' },
   { id: 'tour', label: '관광지' },
-  { id: 'food', label: '맛집' },
+  { id: 'food', label: '식당' },
   { id: 'cafe', label: '카페' },
   { id: 'festival', label: '축제' },
   { id: 'stay', label: '숙박' },
@@ -529,8 +559,11 @@ watch(filteredPlaces, () => {
       <div v-else class="place-cards">
         <article class="place-card" v-for="place in displayedPlaces" :key="place.id">
           <div class="place-image-wrap">
-            <img v-if="place.image" :src="place.image" :alt="place.name" class="place-image" />
-            <div v-else class="place-icon">🏙️</div>
+            <img
+              :src="place.image || getDefaultImage(place)"
+              :alt="place.name"
+              class="place-image"
+            />
           </div>
 
           <div class="place-info">
@@ -590,8 +623,11 @@ watch(filteredPlaces, () => {
 
         <div class="detail-modal-content">
           <div class="detail-modal-image-wrap">
-            <img v-if="selectedPlace.image" :src="selectedPlace.image" :alt="selectedPlace.name" class="detail-modal-image" />
-            <div v-else class="detail-modal-image-placeholder">🏙️</div>
+            <img
+              :src="selectedPlace.image || getDefaultImage(selectedPlace)"
+              :alt="selectedPlace.name"
+              class="detail-modal-image"
+            />
           </div>
 
           <div class="detail-modal-info">
