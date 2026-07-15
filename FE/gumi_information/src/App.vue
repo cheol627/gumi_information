@@ -131,9 +131,22 @@ const activeRegion = ref('all')
 const map = ref(null)
 const markerGroup = ref(null)
 const mapBounds = ref(null)
+
+const pageSize = 10
+const currentPage = ref(1)
+
 const displayedPlaces = computed(() => {
-  return filteredPlaces.value.slice(0, 100)
+  const start = (currentPage.value - 1) * pageSize
+  return filteredPlaces.value.slice(start, start + pageSize)
 })
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredPlaces.value.length / pageSize))
+})
+
+const goToPage = (page) => {
+  currentPage.value = Math.max(1, Math.min(totalPages.value, page))
+}
 
 function mapTypeFromCats(place) {
   const text = [
@@ -409,6 +422,7 @@ watch(
 )
 
 watch(filteredPlaces, () => {
+  currentPage.value = 1
   updateMarkers()
 })
 </script>
@@ -489,6 +503,37 @@ watch(filteredPlaces, () => {
 </article>
 </div>
     </section>
+
+    <div v-if="filteredPlaces.length > 0" class="pagination">
+  <button
+    class="page-nav"
+    type="button"
+    :disabled="currentPage === 1"
+    @click="goToPage(currentPage - 1)"
+  >
+    이전
+  </button>
+
+  <button
+    v-for="page in totalPages"
+    :key="page"
+    class="page-number"
+    :class="{ selected: currentPage === page }"
+    type="button"
+    @click="goToPage(page)"
+  >
+    {{ page }}
+  </button>
+
+  <button
+    class="page-nav"
+    type="button"
+    :disabled="currentPage === totalPages"
+    @click="goToPage(currentPage + 1)"
+  >
+    다음
+  </button>
+</div>
 
     <button class="current-location-button" type="button">
       현재 위치로 이동
@@ -666,5 +711,31 @@ button.selected { background: #111; color: #fff; border-color: #111; }
   line-height: 1.6;
   color: #4b5563;
   margin: 0;
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.page-nav,
+.page-number {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111;
+  padding: 8px 12px;
+  border-radius: 999px;
+  min-width: 40px;
+}
+.page-nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-number.selected {
+  background: #111;
+  color: #fff;
+  border-color: #111;
 }
 </style>
