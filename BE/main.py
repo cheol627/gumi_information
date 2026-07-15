@@ -4,7 +4,7 @@ from typing import Optional, List
 from fastapi import FastAPI, Depends, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, or_, func
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from openai import OpenAI
 from dotenv import load_dotenv
