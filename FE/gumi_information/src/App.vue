@@ -31,10 +31,14 @@
       <!-- [1] 홈 탭 -->
       <template v-if="currentMenu === 'home'">
         <section class="left-section">
-          <CategorySelector @submit="handleCategorySelection" />
+          <CategorySelector
+            @category-selected="selectedCategory = $event"
+          />
         </section>
         <section class="right-section">
-          <PostBoard />
+          <PlaceRecommendation
+            :category="selectedCategory"
+          />
         </section>
       </template>
 
@@ -167,7 +171,13 @@ import CategorySelector from './components/CategorySelector.vue'
 import PostBoard from './components/PostBoard.vue'
 import LocalInfoView from './views/LocalInfoView.vue'
 import MapView from './views/MapView.vue'
+import PlaceRecommendation from './components/PlaceRecommendation.vue'
 
+<<<<<<< FE/gumi_information/src/App.vue
+const selectedCategory = ref(null)
+
+=======
+>>>>>>> FE/gumi_information/src/App.vue
 // 탭 메뉴 설정
 const currentMenu = ref('home')
 

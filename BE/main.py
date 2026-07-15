@@ -4,7 +4,7 @@ from typing import Optional, List
 from fastapi import FastAPI, Depends, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, or_
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, or_, func
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -289,11 +289,42 @@ def chat_with_filtered_db(request: ChatRequest, db: Session = Depends(get_db)):
 # [기존] 여행지 API
 # ------------------------------------------
 @app.get("/places")
-def list_places(keyword: Optional[str] = Query(None), db: Session = Depends(get_db)):
+def list_places(
+    keyword: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     query = db.query(Place)
+
     if keyword:
-        query = query.filter(Place.title.contains(keyword))
-    return [place_to_dict(p) for p in query.order_by(Place.title).all()]
+        query = query.filter(
+            Place.title.contains(keyword)
+        )
+
+    places = query.order_by(Place.title).all()
+
+    result = []
+
+    for place in places:
+
+        avg_rating = (
+            db.query(func.avg(PlaceReview.rating))
+            .filter(
+                PlaceReview.place_content_id
+                == place.content_id
+            )
+            .scalar()
+        )
+
+        item = place_to_dict(place)
+
+        item["avg_rating"] = round(
+            float(avg_rating or 0),
+            1
+        )
+
+        result.append(item)
+
+    return result
 
 @app.get("/places/{content_id}")
 def get_place(content_id: str, db: Session = Depends(get_db)):
