@@ -1,7 +1,7 @@
-<!-- LocalInfoView.vue -->
+<!-- src/components/Calender.vue (또는 기존 위치) -->
 <template>
   <div class="local-info-container">
-    <!-- 상단 요약 & 카테고리 필터 탭 -->
+    <!-- 상단 요약 & 월별/유형별 필터 탭 -->
     <div class="filter-header">
       <div class="tag-filters">
         <button 
@@ -13,47 +13,49 @@
           {{ tab.label }}
         </button>
       </div>
-      <span class="results-count">총 {{ filteredPlaces.length }}개의 장소</span>
+      <span class="results-count">이번 달 예정 행사: 총 {{ filteredEvents.length }}개</span>
     </div>
 
-    <!-- 관광지 카드 리스트 -->
+    <!-- 지역 행사/축제 카드 리스트 -->
     <div class="places-grid">
       <div 
-        v-for="place in filteredPlaces" 
-        :key="place.id" 
+        v-for="event in filteredEvents" 
+        :key="event.id" 
         class="place-card"
-        @click="selectPlace(place)"
+        @click="selectEvent(event)"
       >
         <div class="card-image-placeholder">
-          <span class="emoji-icon">{{ place.emoji }}</span>
+          <span class="emoji-icon">{{ event.emoji }}</span>
         </div>
         <div class="card-body">
-          <span class="place-tag">{{ place.category }}</span>
-          <h3 class="place-title">{{ place.title }}</h3>
-          <p class="place-addr">📍 {{ place.address }}</p>
-          <p class="place-desc">{{ place.description }}</p>
+          <span class="place-tag" :class="event.category">{{ getCategoryLabel(event.category) }}</span>
+          <h3 class="place-title">{{ event.title }}</h3>
+          <p class="place-date">📅 {{ event.date }}</p>
+          <p class="place-addr">📍 {{ event.address }}</p>
+          <p class="place-desc">{{ event.description }}</p>
           <div class="card-footer">
-            <span class="like-badge">❤️ {{ place.likes }}</span>
-            <span class="detail-btn-text">상세보기 →</span>
+            <span class="like-badge">🔥 관심도 {{ event.likes }}</span>
+            <span class="detail-btn-text">일정 상세 →</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 상세 보기 모달 창 -->
-    <div v-if="selectedPlace" class="modal-overlay" @click.self="selectedPlace = null">
+    <!-- 행사 상세 보기 모달 창 -->
+    <div v-if="selectedEvent" class="modal-overlay" @click.self="selectedEvent = null">
       <div class="modal-content">
-        <button class="close-btn" @click="selectedPlace = null">✕</button>
+        <button class="close-btn" @click="selectedEvent = null">✕</button>
         <div class="modal-hero">
-          <span class="modal-emoji">{{ selectedPlace.emoji }}</span>
+          <span class="modal-emoji">{{ selectedEvent.emoji }}</span>
         </div>
         <div class="modal-body">
-          <span class="place-tag">{{ selectedPlace.category }}</span>
-          <h2>{{ selectedPlace.title }}</h2>
-          <p class="modal-addr"><strong>주소:</strong> {{ selectedPlace.address }}</p>
-          <p class="modal-tel" v-if="selectedPlace.tel"><strong>문의처:</strong> {{ selectedPlace.tel }}</p>
+          <span class="place-tag" :class="selectedEvent.category">{{ getCategoryLabel(selectedEvent.category) }}</span>
+          <h2>{{ selectedEvent.title }}</h2>
+          <p class="modal-addr"><strong>일시:</strong> {{ selectedEvent.date }}</p>
+          <p class="modal-addr"><strong>장소:</strong> {{ selectedEvent.address }}</p>
+          <p class="modal-tel" v-if="selectedEvent.tel"><strong>문의처:</strong> {{ selectedEvent.tel }}</p>
           <hr class="divider" />
-          <p class="modal-desc">{{ selectedPlace.details }}</p>
+          <p class="modal-desc">{{ selectedEvent.details }}</p>
         </div>
       </div>
     </div>
@@ -63,84 +65,95 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-// 카테고리 탭 목록
+// 카테고리 탭 목록 (행사 유형별 분류)
 const activeTab = ref('all')
 const tabs = [
-  { label: '전체 보기', value: 'all' },
-  { label: '⛰️ 자연/명소', value: 'nature' },
-  { label: '☕ 맛집/카페', value: 'food' },
-  { label: '🎨 문화/체험', value: 'culture' }
+  { label: '전체 일정', value: 'all' },
+  { label: '🎉 축제/공연', value: 'festival' },
+  { label: '🏛️ 전시/전통', value: 'culture' },
+  { label: '🏃 체육/대회', value: 'sports' }
 ]
 
-// 선택된 상세 보기 장소 (모달용)
-const selectedPlace = ref(null)
-const selectPlace = (place) => {
-  selectedPlace.value = place
+// 선택된 상세 보기 행사 (모달용)
+const selectedEvent = ref(null)
+const selectEvent = (event) => {
+  selectedEvent.value = event
 }
 
-// 구미/경북 실제 정보 더미 데이터 
-const places = ref([
+// 카테고리 한글 텍스트 반환용 헬퍼 함수
+const getCategoryLabel = (cat) => {
+  const labels = { festival: '축제/공연', culture: '전시/전통', sports: '체육/대회' }
+  return labels[cat] || cat
+}
+
+// 구미/경북 지역 행사/축제 일정 캘린더 더미 데이터
+const events = ref([
   {
     id: 1,
-    title: '금오산 도립공원',
-    category: 'nature',
-    emoji: '⛰️',
-    address: '경상북도 구미시 금오산로 402-4',
+    title: '금오산 잔디광장 봄 락 페스티벌',
+    category: 'festival',
+    emoji: '🎸',
+    date: '2026년 5월 15일 ~ 5월 17일',
+    address: '경상북도 구미시 금오산로 402-4 잔디광장',
     tel: '054-480-4601',
-    description: '아름다운 기암괴석과 폭포, 산책로가 어우러진 구미의 대표 명산입니다.',
-    details: '금오산은 해발 976m로 산 정상 아래 현월봉, 약사암 등이 절경을 이룹니다. 산세가 완만하고 잘 정돈된 둘레길과 금오지 올레길이 있어 남녀노소 산책하기 아주 좋으며, 가을철 단풍이 특히 아름다운 경북의 명소입니다.',
-    likes: 128
+    description: '푸른 금오산을 배경으로 펼쳐지는 구미 최대의 인디 밴드 및 락 음악 축제입니다.',
+    details: '구미 시민과 경북 지역 주민들을 위해 매년 봄 개최되는 음악 축제입니다. 돗자리를 펴고 잔디밭에 앉아 무료로 공연을 관람할 수 있으며, 인근 금리단길 매장들과 연계한 다양한 푸드트럭 팝업스토어가 운영됩니다.',
+    likes: 245
   },
   {
     id: 2,
-    title: '금리단길 카페거리',
-    category: 'food',
-    emoji: '☕',
-    address: '경상북도 구미시 원평동 일대',
-    tel: '',
-    description: '구미역 뒤편 주택가를 개조해 감성 가득한 카페와 소품샵이 모여있는 거리입니다.',
-    details: '금오산 올라가는 길목(원평동 일대)에 위치한 힙한 감성의 골목길입니다. 개성 넘치는 개인 로스터리 카페, 감성 일식당, 아기자기한 서점과 소품샵들이 가득해 연인들의 데이트 코스나 친구들과 가벼운 나들이로 사랑받고 있습니다.',
-    likes: 95
+    title: '낙동강 핑크뮬리 걷기 대회',
+    category: 'sports',
+    emoji: '🏃',
+    date: '2026년 10월 10일 (토)',
+    address: '경상북도 구미시 낙동강변로 820 체육공원 일원',
+    tel: '054-480-6181',
+    description: '가을바람과 함께 만개한 핑크뮬리 산책길을 따라 걷는 가족 중심의 건강 행사입니다.',
+    details: '국내 최대 규모의 낙동강 체육공원 내 핑크뮬리 군락지를 따라 걷는 5km 코스 코스입니다. 완주자 전원에게는 지역 특산품 기념품을 증정하며, 페이스페인팅, 어린이 자전거 묘기 등 가족 단위 관람객을 위한 이벤트 부스가 다채롭게 마련됩니다.',
+    likes: 189
   },
   {
     id: 3,
-    title: '구미 과학관',
+    title: '선산 선비문화재 및 오일장 풍물 전시',
     category: 'culture',
-    emoji: '🚀',
-    address: '경상북도 구미시 3공단1로 244-77',
-    tel: '054-476-6501',
-    description: '아이들과 함께 우주와 기초과학을 재미있게 체험하고 배울 수 있는 공간입니다.',
-    details: '낙동강 체육공원 근처에 위치한 어린이/가족 맞춤형 과학 체험 시설입니다. 플라네타리움(천체투영관)과 4D 시어터가 있어 생생하게 우주를 구경할 수 있으며, 주말마다 흥미로운 만들기 과학교실 프로그램이 운영됩니다.',
-    likes: 64
+    emoji: '🌾',
+    date: '2026년 9월 12일 ~ 9월 14일',
+    address: '경상북도 구미시 선산읍 단계동길 24',
+    tel: '054-480-2641',
+    description: '유서 깊은 선산의 선비 정신과 영남 풍물놀이를 현대적으로 재해석한 전통 문화 행사입니다.',
+    details: '조선시대 인재의 고장이라 불리던 선산의 역사적 가치를 기리는 문화제입니다. 장날(2일, 7일)과 연계하여 옛 선산 동헌 투어, 한복 입기 체험, 전통 떡메치기 및 장터 국밥 거리 시식 행사가 함께 진행됩니다.',
+    likes: 132
   },
   {
     id: 4,
-    title: '낙동강 체육공원',
-    category: 'nature',
-    emoji: '🚴',
-    address: '경상북도 구미시 낙동강변로 820',
-    tel: '054-480-6181',
-    description: '국내 최대 규모의 둔치 체육공원으로 피크닉, 캠핑, 자전거를 즐기기 좋습니다.',
-    details: '엄청난 규모의 잔디밭과 축구장, 야구장, 풋살장 등 체육 인프라가 완비된 공원입니다. 자전거 대여소에서 자전거를 타거나, 가을에는 핑크뮬리와 메밀꽃밭이 만발해 출사지로도 인기가 대단하며 오토캠핑장 시설도 훌륭합니다.',
-    likes: 112
+    title: '구미 과학관 우주 돔 텐트 별빛 캠프',
+    category: 'culture',
+    emoji: '🔭',
+    date: '2026년 8월 22일 (토) 18:00',
+    address: '경상북도 구미시 3공단1로 244-77 과학관 천체관측대',
+    tel: '054-476-6501',
+    description: '여름밤 하늘의 별자리와 은하수를 대형 망원경으로 직접 관측해보는 어린이 천체 캠프입니다.',
+    details: '구미과학관 전문 연구원의 해설과 함께 여름철 대삼각형 별자리를 관측하는 프로그램입니다. 플라네타리움 스페셜 영상 관람 및 나만의 LED 별자리 무드등 만들기 워크숍이 포함되어 있어 사전 예약이 필수인 인기 일정입니다.',
+    likes: 156
   },
   {
     id: 5,
-    title: '선산 5일장',
-    category: 'culture',
-    emoji: '🍎',
-    address: '경상북도 구미시 선산읍 남문로 일원',
+    title: '경북도민 체육대회 구미 유치 기념 콘서트',
+    category: 'festival',
+    emoji: '🎤',
+    date: '2026년 6월 05일 19:30',
+    address: '경상북도 구미시 시민운동장 주경기장',
     tel: '',
-    description: '매월 2일, 7일에 열리는 경북에서 손꼽히는 큰 규모의 전통 오일장입니다.',
-    details: '조선시대부터 유서 깊은 전통 시장으로, 장날만 되면 선산 일대에 수많은 노점과 먹거리가 가득 들어섭니다. 직접 기른 신선한 야채부터 씨앗호떡, 옛날 통닭, 손칼국수 등 군침 도는 전통 간식 투어를 하기에 완벽한 장소입니다.',
-    likes: 82
+    description: '경북도민체전 유치를 축하하기 위해 국내 유명 가수들이 총출동하는 특별 문화 축제입니다.',
+    details: '도민체전의 성공적인 개최와 경북도민 화합을 위한 초대형 오픈 콘서트입니다. 화려한 드론 라이트쇼와 불꽃놀이가 피날레를 장식할 예정이며, 입장은 선착순 무료로 진행됩니다.',
+    likes: 310
   }
 ])
 
-// 탭 필터링 로직
-const filteredPlaces = computed(() => {
-  if (activeTab.value === 'all') return places.value
-  return places.value.filter(place => place.category === activeTab.value)
+// 탭 필터링 로직 (축제/문화/체육 등)
+const filteredEvents = computed(() => {
+  if (activeTab.value === 'all') return events.value
+  return events.value.filter(event => event.category === activeTab.value)
 })
 </script>
 
@@ -194,7 +207,7 @@ const filteredPlaces = computed(() => {
   font-weight: 500;
 }
 
-/* 관광지 카드 그리드 */
+/* 축제 카드 그리드 */
 .places-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -216,7 +229,7 @@ const filteredPlaces = computed(() => {
 }
 
 .card-image-placeholder {
-  background-color: #f1f3f5;
+  background-color: #f8f9fa;
   height: 140px;
   display: flex;
   align-items: center;
@@ -234,19 +247,28 @@ const filteredPlaces = computed(() => {
 
 .place-tag {
   font-size: 11px;
-  color: #2b8a3e;
-  background-color: #e8f5e9;
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: 700;
-  text-transform: uppercase;
 }
+/* 카테고리별 다채로운 배지 컬러 분기 */
+.place-tag.festival { color: #d9480f; background-color: #fff0f6; }
+.place-tag.culture { color: #2b8a3e; background-color: #e8f5e9; }
+.place-tag.sports { color: #1c7ed6; background-color: #e7f5ff; }
 
 .place-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   margin: 10px 0 6px 0;
   color: #212529;
+  line-height: 1.3;
+}
+
+.place-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e03131;
+  margin: 0 0 4px 0;
 }
 
 .place-addr {
@@ -260,7 +282,6 @@ const filteredPlaces = computed(() => {
   color: #495057;
   line-height: 1.4;
   margin: 0 0 16px 0;
-  /* 말줄임표 처리 */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -276,14 +297,14 @@ const filteredPlaces = computed(() => {
 }
 
 .like-badge {
-  color: #e03131;
+  color: #495057;
 }
 
 .detail-btn-text {
   color: #111;
 }
 
-/* 모달 상세 창 스타일 */
+/* 모달 스타일 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -330,11 +351,6 @@ const filteredPlaces = computed(() => {
   align-items: center;
   justify-content: center;
   z-index: 10;
-  transition: background 0.2s;
-}
-
-.close-btn:hover {
-  background: rgba(0, 0, 0, 0.6);
 }
 
 .modal-hero {
@@ -354,9 +370,10 @@ const filteredPlaces = computed(() => {
 }
 
 .modal-body h2 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   margin: 10px 0 16px 0;
+  line-height: 1.3;
 }
 
 .modal-addr, .modal-tel {
