@@ -205,3 +205,16 @@ def delete_post(post_id: int, password: str = Query(...), db: Session = Depends(
     db.delete(post)
     db.commit()
     return {"message": "삭제 완료"}
+
+# 🔥 [신규 추가] 6. 게시글 좋아요(추천) 증가 API
+@app.post("/api/posts/{post_id}/like", response_model=PostResponse)
+def like_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    
+    # 좋아요 수 1 증가
+    post.likes += 1
+    db.commit()
+    db.refresh(post)
+    return post

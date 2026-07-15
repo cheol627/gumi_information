@@ -27,7 +27,9 @@
           </div>
           <div class="post-stats">
             <span>👁️ {{ post.views }}</span>
-            <span>🤍 {{ post.likes }}</span>
+            <span @click.stop="handleLike(post.id)" class="like-stat-btn">
+              ❤️ {{ post.likes }}
+            </span>
           </div>
         </div>
 
@@ -171,6 +173,21 @@ const handleDelete = async (id) => {
   }
 }
 
+// 🔥 [신규 추가] 좋아요 증가 API 호출 함수
+const handleLike = async (id) => {
+  try {
+    const response = await axios.post(`${API_URL}/${id}/like`)
+    
+    // 현재 목록 데이터에서 해당 게시글을 찾아 좋아요 수 즉시 갱신
+    const target = posts.value.find(p => p.id === id)
+    if (target) {
+      target.likes = response.data.likes
+    }
+  } catch (error) {
+    console.error('좋아요 반영 실패:', error)
+  }
+}
+
 onMounted(() => { fetchPosts() })
 </script>
 
@@ -192,6 +209,15 @@ onMounted(() => { fetchPosts() })
 .post-meta { font-size: 13px; color: #888; }
 .divider { margin: 0 6px; color: #eee; }
 .post-stats { display: flex; gap: 12px; font-size: 13px; color: #666; }
+.like-stat-btn {
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  user-select: none; /* 더블클릭 시 텍스트 블록 지정 방지 */
+}
+.like-stat-btn:hover {
+  transform: scale(1.15); /* 마우스 올리면 하트가 살짝 커짐 */
+}
+
 
 .post-detail-content { padding: 20px; background: #fafafa; border-top: 1px solid #f1f3f5; }
 .full-text { font-size: 14px; color: #333; line-height: 1.6; margin: 0 0 16px 0; white-space: pre-wrap; }
