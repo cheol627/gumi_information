@@ -1,4 +1,4 @@
-
+<!-- src/components/CategorySelector.vue -->
 <template>
   <!-- 외부 레이아웃 영향을 받지 않고 카드 높이를 일정하게 꽉 잡아두는 고정용 최상위 컨테이너 -->
   <div class="category-panel-container">
@@ -43,20 +43,13 @@
 <script setup>
 import { ref } from 'vue'
 
-const emit = defineEmits(['category-selected'])
+const emit = defineEmits(['submit'])
 
 // assets 폴더의 이미지 연결
 import sportsImg from '../assets/exercise.png'
 import foodImg from '../assets/food.png'
 import travelImg from '../assets/travel.png'
 import shoppingImg from '../assets/shopping.png'
-
-// 💡 [추가] 부모 컴포넌트로 데이터를 전송하기 위한 emit 정의
-<<<<<<< FE/gumi_information/src/components/CategorySelector.vue
-// const emit = defineEmits(['submit'])
-=======
-const emit = defineEmits(['submit'])
->>>>>>> FE/gumi_information/src/components/CategorySelector.vue
 
 const categories = [
   { id: 'sports', title: '운동', tags: '헬스, 러닝, 등산 등', desc: '건강한 라이프스타일 정보를 받아보세요!', imgUrl: sportsImg },
@@ -88,7 +81,7 @@ const submitSelection = () => {
   const categoryTitle = targetCategory ? targetCategory.title : selectedCategory.value
   
   // 💡 [수정] 알림창만 띄우는 대신, 부모(App.vue)로 'submit' 이벤트와 한글 카테고리명을 전달합니다.
-  emit('submit', categoryTitle)
+  emit('category-selected', selectedCategory.value)
 }
 </script>
 
