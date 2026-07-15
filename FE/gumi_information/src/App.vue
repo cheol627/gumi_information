@@ -48,14 +48,7 @@
       <!-- [3] 지도 탭 -->
       <template v-else-if="currentMenu === 'map'">
         <section class="full-section">
-          <div class="section-header">
-            <h2>📍 내 주변 지도 검색</h2>
-            <p>구미/경북 지역의 핵심 스팟과 관광지를 한눈에 지도로 보여줍니다.</p>
-          </div>
-          <div class="map-placeholder">
-            <span style="font-size: 40px; margin-bottom: 12px;">🗺️</span>
-            <p>지도 API가 연동될 영역입니다.</p>
-          </div>
+          <MapView />
         </section>
       </template>
 
@@ -121,6 +114,7 @@ import { ref, nextTick } from 'vue'
 import CategorySelector from './components/CategorySelector.vue'
 import PostBoard from './components/PostBoard.vue'
 import LocalInfoView from './views/LocalInfoView.vue'
+import MapView from './views/MapView.vue'
 
 const currentMenu = ref('home')
 
