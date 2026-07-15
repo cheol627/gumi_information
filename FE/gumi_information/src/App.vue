@@ -22,6 +22,26 @@ L.Icon.Default.mergeOptions({
   ).href
 })
 
+const categoryLabels = {
+  tour: '관광지',
+  food: '맛집',
+  cafe: '카페',
+  festival: '축제',
+  stay: '숙박'
+}
+
+const selectedPlace = ref(null)
+
+const openPlaceDetail = (place) => {
+  selectedPlace.value = place
+}
+
+const closePlaceDetail = () => {
+  selectedPlace.value = null
+}
+
+const getTypeLabel = (type) => categoryLabels[type] || '기타'
+
 const categories = [
   { id: 'all', label: '전체' },
   { id: 'tour', label: '관광지' },
@@ -48,39 +68,54 @@ const displayedPlaces = computed(() => {
   return filteredPlaces.value.slice(0, 100)
 })
 
-function mapTypeFromCats(cat1, cat2, cat3, contentTypeId) {
-  const txt = `${cat1 || ''} ${cat2 || ''} ${cat3 || ''}`.toLowerCase()
+function mapTypeFromCats(place) {
+  const text = [
+    place.title || '',
+    place.addr1 || '',
+    place.addr2 || '',
+    place.cat1 || '',
+    place.cat2 || '',
+    place.cat3 || '',
+    place.lcls_systm1 || '',
+    place.lcls_systm2 || '',
+    place.lcls_systm3 || ''
+  ]
+    .join(' ')
+    .toLowerCase()
 
-  if (txt.includes('음식') || txt.includes('음식점') || contentTypeId === 39) {
-    return 'food'
-  }
-  if (txt.includes('카페') || contentTypeId === 38) {
+  const contentTypeId = Number(
+    place.content_type_id ?? place.contentTypeId ?? place.contenttypeid
+  )
+
+  if (/(카페|커피|cafe|coffee|디저트|베이커리|브런치)/.test(text)) {
     return 'cafe'
   }
+
   if (
-    txt.includes('축제') ||
-    txt.includes('공연') ||
-    contentTypeId === 15
+    contentTypeId === 39 ||
+    /(음식점|맛집|식당|한식|중식|일식|양식|분식|술집|주점|백반|국밥|치킨|피자)/.test(text)
   ) {
+    return 'food'
+  }
+
+  if (/(축제|공연|행사)/.test(text)) {
     return 'festival'
   }
-  if (
-    txt.includes('숙박') ||
-    txt.includes('호텔') ||
-    txt.includes('민박') ||
-    contentTypeId === 32
-  ) {
+
+  if (/(숙박|호텔|민박)/.test(text)) {
     return 'stay'
   }
+
   if (
-    txt.includes('관광') ||
-    txt.includes('명소') ||
-    txt.includes('레포츠') ||
-    txt.includes('문화') ||
-    [12, 14, 28].includes(contentTypeId)
+    contentTypeId === 12 ||
+    contentTypeId === 14 ||
+    contentTypeId === 15 ||
+    contentTypeId === 28 ||
+    /(관광|명소|레포츠|문화)/.test(text)
   ) {
     return 'tour'
   }
+
   return 'tour'
 }
 
@@ -216,26 +251,34 @@ async function fetchPlaces() {
         ? Number(p.mapx)
         : null
 
-    const type = mapTypeFromCats(
-      p.cat1,
-      p.cat2,
-      p.cat3,
-      Number(p.content_type_id)
-    )
+    const type = mapTypeFromCats({
+  ...p,
+  content_type_id: p.content_type_id ?? p.contenttypeid,
+  title: p.title || '',
+  addr1: p.addr1 || '',
+  addr2: p.addr2 || '',
+  cat1: p.cat1 || '',
+  cat2: p.cat2 || '',
+  cat3: p.cat3 || '',
+  lcls_systm1: p.lcls_systm1 || '',
+  lcls_systm2: p.lcls_systm2 || '',
+  lcls_systm3: p.lcls_systm3 || ''
+})
 
     return {
-      ...p,
-      id: p.id ?? p.content_id ?? null,
-      name: p.title || '',
-      region: p.addr1 || '',
-      type,
-      area: p.areacode || '',
-      rating: '0.0',
-      review: 0,
-      lat,
-      lng,
-      image: p.firstimage || p.firstimage2 || ''
-    }
+  ...p,
+  id: p.id ?? p.content_id ?? null,
+  name: p.title || '',
+  region: p.addr1 || '',
+  address: p.addr1 || p.addr2 || '',
+  type,
+  area: p.areacode || '',
+  rating: '0.0',
+  review: 0,
+  lat,
+  lng,
+  image: p.firstimage || p.firstimage2 || ''
+}
   })
   .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))
 
@@ -346,7 +389,9 @@ watch(filteredPlaces, () => {
       <span>({{ place.review }})</span>
     </div>
 
-    <button class="detail-button">상세보기</button>
+    <button class="detail-button" type="button" @click="openPlaceDetail(place)">
+  상세보기
+</button>
   </div>
 </article>
 </div>
@@ -355,6 +400,35 @@ watch(filteredPlaces, () => {
     <button class="current-location-button" type="button">
       현재 위치로 이동
     </button>
+
+    <div v-if="selectedPlace" class="detail-modal-overlay" @click.self="closePlaceDetail">
+  <div class="detail-modal">
+    <button class="detail-modal-close" type="button" @click="closePlaceDetail">×</button>
+
+    <div class="detail-modal-content">
+      <div class="detail-modal-image-wrap">
+        <img
+          v-if="selectedPlace.image"
+          :src="selectedPlace.image"
+          :alt="selectedPlace.name"
+          class="detail-modal-image"
+        />
+        <div v-else class="detail-modal-image-placeholder">🏙️</div>
+      </div>
+
+      <div class="detail-modal-info">
+        <span class="detail-chip">{{ getTypeLabel(selectedPlace.type) }}</span>
+        <h3>{{ selectedPlace.name }}</h3>
+        <p class="detail-address">{{ selectedPlace.address || selectedPlace.region }}</p>
+
+        <div class="detail-meta-row">
+          <span>평점: ★ {{ selectedPlace.rating }}</span>
+          <span>리뷰: {{ selectedPlace.review }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
   </div>
 </template>
 
@@ -408,7 +482,6 @@ button.selected { background: #111; color: #fff; border-color: #111; }
   align-items: flex-end;
   gap: 10px;
 }
-
 .detail-button {
   white-space: nowrap;
 }
@@ -421,5 +494,84 @@ button.selected { background: #111; color: #fff; border-color: #111; }
   background: #fafafa;
   color: #6b7280;
   font-size: 0.95rem;
+}
+.detail-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+.detail-modal {
+  width: min(720px, 100%);
+  background: #fff;
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+.detail-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: none;
+  background: #f3f4f6;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  padding: 0;
+}
+.detail-modal-content {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.detail-modal-image-wrap {
+  width: 100%;
+  height: 220px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #f3f4f6;
+  display: grid;
+  place-items: center;
+}
+.detail-modal-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.detail-chip {
+  display: inline-block;
+  padding: 6px 10px;
+  background: #111;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+.detail-modal-info h3 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+.detail-address {
+  margin: 0 0 12px;
+  color: #6b7280;
+}
+.detail-meta-row {
+  display: flex;
+  gap: 16px;
+  color: #374151;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.detail-description {
+  line-height: 1.6;
+  color: #4b5563;
+  margin: 0;
 }
 </style>
