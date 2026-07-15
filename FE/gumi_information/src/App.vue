@@ -41,12 +41,6 @@
 <!-- [2] 💡 캘린더 탭 -->
       <template v-else-if="currentMenu === 'local-info'">
         <section class="full-section">
-          <div class="section-header">
-            <h2>📅 지역 행사 캘린더</h2>
-            <p>구미/경북 지역의 주요 축제, 행사 및 일정을 한눈에 확인하세요.</p>
-          </div>
-          
-          <!-- 💡 플레이스홀더를 지우고 실제 달력 컴포넌트를 바로 렌더링합니다 -->
           <LocalInfoView />
         </section>
       </template>
@@ -54,14 +48,7 @@
       <!-- [3] 지도 탭 -->
       <template v-else-if="currentMenu === 'map'">
         <section class="full-section">
-          <div class="section-header">
-            <h2>📍 내 주변 지도 검색</h2>
-            <p>구미/경북 지역의 핵심 스팟과 관광지를 한눈에 지도로 보여줍니다.</p>
-          </div>
-          <div class="map-placeholder">
-            <span style="font-size: 40px; margin-bottom: 12px;">🗺️</span>
-            <p>지도 API가 연동될 영역입니다.</p>
-          </div>
+          <MapView />
         </section>
       </template>
 
@@ -127,6 +114,7 @@ import { ref, nextTick } from 'vue'
 import CategorySelector from './components/CategorySelector.vue'
 import PostBoard from './components/PostBoard.vue'
 import LocalInfoView from './views/LocalInfoView.vue'
+import MapView from './views/MapView.vue'
 
 const currentMenu = ref('home')
 
