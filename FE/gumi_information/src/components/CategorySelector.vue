@@ -39,6 +39,8 @@
 <script setup>
 import { ref } from 'vue'
 
+const emit = defineEmits(['category-selected'])
+
 // assets 폴더의 이미지 연결
 import sportsImg from '../assets/exercise.png'
 import foodImg from '../assets/food.png'
@@ -67,14 +69,16 @@ const toggleCategory = (id) => {
 }
 
 const submitSelection = () => {
+  console.log('선택값:', selectedCategory.value)
+
   if (!selectedCategory.value) {
     alert('카테고리를 선택해 주세요.')
     return
   }
-  
-  // 현재 선택된 카테고리의 한글 타이틀 찾기
-  const targetCategory = categories.find(c => c.id === selectedCategory.value)
-  alert(`선택된 카테고리: ${targetCategory ? targetCategory.title : selectedCategory.value}`)
+
+  emit('category-selected', selectedCategory.value)
+
+  alert('선택 완료')
 }
 </script>
 
