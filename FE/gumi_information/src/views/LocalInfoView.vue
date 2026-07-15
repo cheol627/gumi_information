@@ -21,10 +21,9 @@
               <button type="button" class="btn-icon" @click="navigate(1)" aria-label="다음">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
-              <button type="button" class="month-label">
+              <span class="month-label">
                 {{ viewMode === '월' ? monthLabel : weekLabel }}
-                <svg viewBox="0 0 24 24" fill="none" class="chevron-down"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+              </span>
             </div>
             <div class="controls-left" v-else>
               <span class="list-summary">전체 일정 {{ filteredEvents.length }}건</span>
@@ -66,7 +65,7 @@
                       class="event-chip"
                       :data-tooltip="ev.title"
                     >
-                      {{ ev.title }}
+                      <span class="event-chip-text">{{ ev.title }}</span>
                     </span>
                   </div>
                 </div>
@@ -143,10 +142,6 @@
         <aside class="sidebar">
           <div class="sidebar-header">
             <h2>다가오는 일정</h2>
-            <button type="button" class="link-btn">
-              전체 일정 보기
-              <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
           </div>
 
           <ul class="upcoming-list">
@@ -163,17 +158,6 @@
 
               <div class="upcoming-actions">
                 <span class="category-tag">{{ ev.category }}</span>
-                <button
-                  type="button"
-                  class="bookmark-btn"
-                  :class="{ active: ev.bookmarked }"
-                  @click="ev.bookmarked = !ev.bookmarked"
-                  aria-label="북마크"
-                >
-                  <svg viewBox="0 0 24 24" :fill="ev.bookmarked ? 'currentColor' : 'none'">
-                    <path d="M6 4h12v16l-6-4-6 4V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                  </svg>
-                </button>
               </div>
             </li>
           </ul>
@@ -564,9 +548,6 @@ function formatEventRange(ev) {
   gap: 4px;
   font-size: 16px;
   font-weight: 700;
-  border: none;
-  background: none;
-  cursor: pointer;
   padding: 8px 6px;
 }
 
@@ -680,14 +661,19 @@ function formatEventRange(ev) {
   font-size: 11px;
   padding: 4px 6px;
   border-radius: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
   position: relative;
   cursor: default;
+  /* overflow: hidden을 여기 두면 아래 :hover::after 툴팁까지 같이 잘려서 안 보임 */
+}
+
+.event-chip-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .event-chip:hover::after {
