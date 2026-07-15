@@ -1,396 +1,1065 @@
-<!-- src/components/Calender.vue (또는 기존 위치) -->
 <template>
-  <div class="local-info-container">
-    <!-- 상단 요약 & 월별/유형별 필터 탭 -->
-    <div class="filter-header">
-      <div class="tag-filters">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.value"
-          @click="activeTab = tab.value"
-          :class="['filter-btn', { active: activeTab === tab.value }]"
+  <div class="page">
+    <!-- Top Nav -->
+    <header class="top-nav">
+      <div class="brand">
+        <span class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" fill="currentColor"/><circle cx="12" cy="10" r="2.5" fill="#fff"/></svg>
+        </span>
+        <div class="brand-text">
+          <strong>LocalHub</strong>
+          <span>구미/경북 지역 정보 &amp; 커뮤니티</span>
+        </div>
+      </div>
+
+      <nav class="nav-tabs">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          type="button"
+          class="nav-tab"
+          :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
         >
+          <component :is="tab.icon" class="nav-tab-icon" />
           {{ tab.label }}
         </button>
-      </div>
-      <span class="results-count">이번 달 예정 행사: 총 {{ filteredEvents.length }}개</span>
-    </div>
+      </nav>
+    </header>
 
-    <!-- 지역 행사/축제 카드 리스트 -->
-    <div class="places-grid">
-      <div 
-        v-for="event in filteredEvents" 
-        :key="event.id" 
-        class="place-card"
-        @click="selectEvent(event)"
-      >
-        <div class="card-image-placeholder">
-          <span class="emoji-icon">{{ event.emoji }}</span>
-        </div>
-        <div class="card-body">
-          <span class="place-tag" :class="event.category">{{ getCategoryLabel(event.category) }}</span>
-          <h3 class="place-title">{{ event.title }}</h3>
-          <p class="place-date">📅 {{ event.date }}</p>
-          <p class="place-addr">📍 {{ event.address }}</p>
-          <p class="place-desc">{{ event.description }}</p>
-          <div class="card-footer">
-            <span class="like-badge">🔥 관심도 {{ event.likes }}</span>
-            <span class="detail-btn-text">일정 상세 →</span>
+    <main class="content">
+      <div class="content-header">
+        <h1>캘린더</h1>
+        <p>구미/경북 지역의 행사와 축제 일정을 확인해보세요.</p>
+      </div>
+
+      <div class="calendar-layout">
+        <!-- Calendar column -->
+        <section class="calendar-col">
+          <p v-if="isLoading" class="status-text">일정을 불러오는 중...</p>
+          <p v-else-if="loadError" class="status-text status-error">{{ loadError }}</p>
+
+          <div class="calendar-controls">
+            <div class="controls-left" v-if="viewMode !== '목록'">
+              <button type="button" class="btn-outline" @click="goToday">오늘</button>
+              <button type="button" class="btn-icon" @click="navigate(-1)" aria-label="이전">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button type="button" class="btn-icon" @click="navigate(1)" aria-label="다음">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button type="button" class="month-label">
+                {{ viewMode === '월' ? monthLabel : weekLabel }}
+                <svg viewBox="0 0 24 24" fill="none" class="chevron-down"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div class="controls-left" v-else>
+              <span class="list-summary">전체 일정 {{ filteredEvents.length }}건</span>
+            </div>
+
+            <div class="view-toggle">
+              <button
+                v-for="v in viewModes"
+                :key="v"
+                type="button"
+                class="view-toggle-btn"
+                :class="{ active: viewMode === v }"
+                @click="viewMode = v"
+              >
+                {{ v }}
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- 행사 상세 보기 모달 창 -->
-    <div v-if="selectedEvent" class="modal-overlay" @click.self="selectedEvent = null">
-      <div class="modal-content">
-        <button class="close-btn" @click="selectedEvent = null">✕</button>
-        <div class="modal-hero">
-          <span class="modal-emoji">{{ selectedEvent.emoji }}</span>
-        </div>
-        <div class="modal-body">
-          <span class="place-tag" :class="selectedEvent.category">{{ getCategoryLabel(selectedEvent.category) }}</span>
-          <h2>{{ selectedEvent.title }}</h2>
-          <p class="modal-addr"><strong>일시:</strong> {{ selectedEvent.date }}</p>
-          <p class="modal-addr"><strong>장소:</strong> {{ selectedEvent.address }}</p>
-          <p class="modal-tel" v-if="selectedEvent.tel"><strong>문의처:</strong> {{ selectedEvent.tel }}</p>
-          <hr class="divider" />
-          <p class="modal-desc">{{ selectedEvent.details }}</p>
-        </div>
+          <!-- Month view -->
+          <div v-if="viewMode === '월'" class="calendar-grid">
+            <div class="weekday-row">
+              <span v-for="d in weekdays" :key="d" class="weekday">{{ d }}</span>
+            </div>
+
+            <div class="weeks">
+              <div v-for="(week, wi) in calendarWeeks" :key="wi" class="week-row">
+                <div
+                  v-for="day in week"
+                  :key="day.key"
+                  class="day-cell"
+                  :class="{ 'is-outside': !day.inCurrentMonth }"
+                >
+                  <span class="day-number" :class="{ today: day.isToday }">{{ day.date }}</span>
+                  <div class="day-events">
+                    <span
+                      v-for="ev in day.events"
+                      :key="ev.id"
+                      class="event-chip"
+                      :title="ev.title"
+                    >
+                      {{ ev.title }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Week view -->
+          <div v-else-if="viewMode === '주'" class="calendar-grid week-grid">
+            <div class="weekday-row week-weekday-row">
+              <div v-for="d in weekDays" :key="d.key" class="week-weekday-cell">
+                <span class="weekday">{{ weekdays[d.date.getDay()] }}</span>
+                <span class="week-date-number" :class="{ today: d.isToday }">{{ d.date.getDate() }}</span>
+              </div>
+            </div>
+
+            <div class="week-body-row">
+              <div v-for="d in weekDays" :key="d.key" class="week-day-col">
+                <div v-if="!d.events.length" class="week-empty">일정 없음</div>
+                <div v-for="ev in d.events" :key="ev.id" class="week-event-card">
+                  <span v-if="ev.time" class="week-event-time">{{ ev.time }}</span>
+                  <span class="week-event-title">{{ ev.title }}</span>
+                  <span class="week-event-location">{{ ev.location }}</span>
+                  <span class="category-tag week-event-tag">{{ ev.category }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- List view -->
+          <div v-else class="calendar-grid list-view">
+            <div v-if="!listGroups.length" class="list-empty">표시할 일정이 없습니다.</div>
+            <div v-for="group in listGroups" :key="group.dateKey" class="list-group">
+              <div class="list-group-header">{{ group.label }} ({{ group.weekday }})</div>
+              <div class="list-group-events">
+                <div v-for="ev in group.events" :key="ev.id" class="list-event-row">
+                  <span class="category-tag">{{ ev.category }}</span>
+                  <div class="list-event-body">
+                    <p class="list-event-title">{{ ev.title }}</p>
+                    <p class="list-event-meta">{{ formatEventRange(ev) }} · {{ ev.location }}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="bookmark-btn"
+                    :class="{ active: ev.bookmarked }"
+                    @click="ev.bookmarked = !ev.bookmarked"
+                    aria-label="북마크"
+                  >
+                    <svg viewBox="0 0 24 24" :fill="ev.bookmarked ? 'currentColor' : 'none'">
+                      <path d="M6 4h12v16l-6-4-6 4V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="category-filter">
+            <p class="filter-label">카테고리 필터</p>
+            <div class="filter-options">
+              <label class="filter-option">
+                <input type="checkbox" :checked="allSelected" @change="toggleAll" />
+                전체
+              </label>
+              <label v-for="cat in categoryList" :key="cat" class="filter-option">
+                <input type="checkbox" v-model="selectedCategories" :value="cat" />
+                {{ cat }}
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <h2>다가오는 일정</h2>
+            <button type="button" class="link-btn">
+              전체 일정 보기
+              <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+
+          <ul class="upcoming-list">
+            <li v-for="ev in upcomingEvents" :key="ev.id" class="upcoming-item">
+              <div class="date-badge">
+                <span class="date-badge-day">{{ formatShortDate(ev.start) }}</span>
+                <span class="date-badge-weekday">({{ weekdayOf(ev.start) }})</span>
+              </div>
+
+              <div class="upcoming-body">
+                <p class="upcoming-title">{{ ev.title }}</p>
+                <p class="upcoming-meta">{{ formatEventRange(ev) }} · {{ ev.location }}</p>
+              </div>
+
+              <div class="upcoming-actions">
+                <span class="category-tag">{{ ev.category }}</span>
+                <button
+                  type="button"
+                  class="bookmark-btn"
+                  :class="{ active: ev.bookmarked }"
+                  @click="ev.bookmarked = !ev.bookmarked"
+                  aria-label="북마크"
+                >
+                  <svg viewBox="0 0 24 24" :fill="ev.bookmarked ? 'currentColor' : 'none'">
+                    <path d="M6 4h12v16l-6-4-6 4V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </aside>
       </div>
-    </div>
+    </main>
+
+    <button type="button" class="fab" aria-label="커뮤니티 채팅">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 3.2 6.4L4 20l1.3-3.6A7.96 7.96 0 0 1 4 12z" fill="currentColor"/></svg>
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, reactive, computed, h, onMounted } from 'vue'
 
-// 카테고리 탭 목록 (행사 유형별 분류)
-const activeTab = ref('all')
-const tabs = [
-  { label: '전체 일정', value: 'all' },
-  { label: '🎉 축제/공연', value: 'festival' },
-  { label: '🏛️ 전시/전통', value: 'culture' },
-  { label: '🏃 체육/대회', value: 'sports' }
-]
+/* ---------------- Events data (fetched from backend) ---------------- */
+// BE(main.py)의 GET /festivals 를 그대로 사용.
+// 개발 중엔 http://localhost:8000, 배포 시엔 실제 API 주소로 바꿔주세요.
+const API_BASE_URL = 'http://localhost:8000'
 
-// 선택된 상세 보기 행사 (모달용)
-const selectedEvent = ref(null)
-const selectEvent = (event) => {
-  selectedEvent.value = event
-}
+const events = reactive([])
+const isLoading = ref(false)
+const loadError = ref('')
 
-// 카테고리 한글 텍스트 반환용 헬퍼 함수
-const getCategoryLabel = (cat) => {
-  const labels = { festival: '축제/공연', culture: '전시/전통', sports: '체육/대회' }
-  return labels[cat] || cat
-}
-
-// 구미/경북 지역 행사/축제 일정 캘린더 더미 데이터
-const events = ref([
-  {
-    id: 1,
-    title: '금오산 잔디광장 봄 락 페스티벌',
-    category: 'festival',
-    emoji: '🎸',
-    date: '2026년 5월 15일 ~ 5월 17일',
-    address: '경상북도 구미시 금오산로 402-4 잔디광장',
-    tel: '054-480-4601',
-    description: '푸른 금오산을 배경으로 펼쳐지는 구미 최대의 인디 밴드 및 락 음악 축제입니다.',
-    details: '구미 시민과 경북 지역 주민들을 위해 매년 봄 개최되는 음악 축제입니다. 돗자리를 펴고 잔디밭에 앉아 무료로 공연을 관람할 수 있으며, 인근 금리단길 매장들과 연계한 다양한 푸드트럭 팝업스토어가 운영됩니다.',
-    likes: 245
-  },
-  {
-    id: 2,
-    title: '낙동강 핑크뮬리 걷기 대회',
-    category: 'sports',
-    emoji: '🏃',
-    date: '2026년 10월 10일 (토)',
-    address: '경상북도 구미시 낙동강변로 820 체육공원 일원',
-    tel: '054-480-6181',
-    description: '가을바람과 함께 만개한 핑크뮬리 산책길을 따라 걷는 가족 중심의 건강 행사입니다.',
-    details: '국내 최대 규모의 낙동강 체육공원 내 핑크뮬리 군락지를 따라 걷는 5km 코스 코스입니다. 완주자 전원에게는 지역 특산품 기념품을 증정하며, 페이스페인팅, 어린이 자전거 묘기 등 가족 단위 관람객을 위한 이벤트 부스가 다채롭게 마련됩니다.',
-    likes: 189
-  },
-  {
-    id: 3,
-    title: '선산 선비문화재 및 오일장 풍물 전시',
-    category: 'culture',
-    emoji: '🌾',
-    date: '2026년 9월 12일 ~ 9월 14일',
-    address: '경상북도 구미시 선산읍 단계동길 24',
-    tel: '054-480-2641',
-    description: '유서 깊은 선산의 선비 정신과 영남 풍물놀이를 현대적으로 재해석한 전통 문화 행사입니다.',
-    details: '조선시대 인재의 고장이라 불리던 선산의 역사적 가치를 기리는 문화제입니다. 장날(2일, 7일)과 연계하여 옛 선산 동헌 투어, 한복 입기 체험, 전통 떡메치기 및 장터 국밥 거리 시식 행사가 함께 진행됩니다.',
-    likes: 132
-  },
-  {
-    id: 4,
-    title: '구미 과학관 우주 돔 텐트 별빛 캠프',
-    category: 'culture',
-    emoji: '🔭',
-    date: '2026년 8월 22일 (토) 18:00',
-    address: '경상북도 구미시 3공단1로 244-77 과학관 천체관측대',
-    tel: '054-476-6501',
-    description: '여름밤 하늘의 별자리와 은하수를 대형 망원경으로 직접 관측해보는 어린이 천체 캠프입니다.',
-    details: '구미과학관 전문 연구원의 해설과 함께 여름철 대삼각형 별자리를 관측하는 프로그램입니다. 플라네타리움 스페셜 영상 관람 및 나만의 LED 별자리 무드등 만들기 워크숍이 포함되어 있어 사전 예약이 필수인 인기 일정입니다.',
-    likes: 156
-  },
-  {
-    id: 5,
-    title: '경북도민 체육대회 구미 유치 기념 콘서트',
-    category: 'festival',
-    emoji: '🎤',
-    date: '2026년 6월 05일 19:30',
-    address: '경상북도 구미시 시민운동장 주경기장',
-    tel: '',
-    description: '경북도민체전 유치를 축하하기 위해 국내 유명 가수들이 총출동하는 특별 문화 축제입니다.',
-    details: '도민체전의 성공적인 개최와 경북도민 화합을 위한 초대형 오픈 콘서트입니다. 화려한 드론 라이트쇼와 불꽃놀이가 피날레를 장식할 예정이며, 입장은 선착순 무료로 진행됩니다.',
-    likes: 310
+async function loadEvents() {
+  isLoading.value = true
+  loadError.value = ''
+  try {
+    const res = await fetch(`${API_BASE_URL}/festivals`)
+    if (!res.ok) throw new Error(`서버 응답 오류 (${res.status})`)
+    const data = await res.json()
+    events.splice(0, events.length, ...data.map((ev) => ({ ...ev, bookmarked: false })))
+  } catch (err) {
+    loadError.value = '일정을 불러오지 못했어요. 백엔드 서버가 켜져 있는지 확인해주세요.'
+    console.error(err)
+  } finally {
+    isLoading.value = false
   }
+}
+
+onMounted(loadEvents)
+
+/* ---------------- Top nav ---------------- */
+const CalendarIcon = () => h('svg', { viewBox: '0 0 24 24', fill: 'none' }, [
+  h('rect', { x: 3, y: 5, width: 18, height: 16, rx: 2, stroke: 'currentColor', 'stroke-width': 1.8 }),
+  h('path', { d: 'M3 9h18M8 3v4M16 3v4', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round' }),
+])
+const MapIcon = () => h('svg', { viewBox: '0 0 24 24', fill: 'none' }, [
+  h('path', { d: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
+  h('path', { d: 'M9 4v14M15 6v14', stroke: 'currentColor', 'stroke-width': 1.8 }),
+])
+const PinIcon = () => h('svg', { viewBox: '0 0 24 24', fill: 'none' }, [
+  h('path', { d: 'M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
+  h('circle', { cx: 12, cy: 10, r: 2.5, stroke: 'currentColor', 'stroke-width': 1.8 }),
+])
+const ChatIcon = () => h('svg', { viewBox: '0 0 24 24', fill: 'none' }, [
+  h('path', { d: 'M4 12a8 8 0 1 1 3.2 6.4L4 20l1.3-3.6A7.96 7.96 0 0 1 4 12z', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }),
 ])
 
-// 탭 필터링 로직 (축제/문화/체육 등)
-const filteredEvents = computed(() => {
-  if (activeTab.value === 'all') return events.value
-  return events.value.filter(event => event.category === activeTab.value)
+const tabs = [
+  { key: 'calendar', label: '캘린더', icon: CalendarIcon },
+  { key: 'info', label: '지역 정보', icon: MapIcon },
+  { key: 'map', label: '지도', icon: PinIcon },
+  { key: 'community', label: '커뮤니티', icon: ChatIcon },
+]
+const activeTab = ref('calendar')
+
+/* ---------------- Category filter ---------------- */
+const categoryList = ['축제', '행사', '공연', '전시', '기타']
+const selectedCategories = ref([...categoryList]) // default: show everything
+
+const allSelected = computed(() => selectedCategories.value.length === categoryList.length)
+
+function toggleAll(e) {
+  selectedCategories.value = e.target.checked ? [...categoryList] : []
+}
+
+const filteredEvents = computed(() =>
+  events.filter((ev) => selectedCategories.value.includes(ev.category))
+)
+
+/* ---------------- Calendar state & helpers ---------------- */
+const weekdays = ['일', '월', '화', '수', '목', '금', '토']
+const viewModes = ['월', '주', '목록']
+const viewMode = ref('월')
+
+const today = new Date()
+const current = ref(new Date(today.getFullYear(), today.getMonth(), 1))
+
+const viewYear = computed(() => current.value.getFullYear())
+const viewMonth = computed(() => current.value.getMonth())
+
+function navigate(delta) {
+  if (viewMode.value === '월') {
+    current.value = new Date(viewYear.value, viewMonth.value + delta, 1)
+  } else if (viewMode.value === '주') {
+    const d = new Date(current.value)
+    d.setDate(d.getDate() + delta * 7)
+    current.value = d
+  }
+  // 목록 뷰는 날짜 이동 없이 필터된 전체 일정을 보여줍니다.
+}
+
+function goToday() {
+  current.value = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+}
+
+const monthLabel = computed(() => `${viewYear.value}년 ${viewMonth.value + 1}월`)
+
+function toDateKey(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+// Events are shown as a chip only on their start date (matches the design).
+const eventsByDate = computed(() => {
+  const map = {}
+  for (const ev of filteredEvents.value) {
+    if (!map[ev.start]) map[ev.start] = []
+    map[ev.start].push(ev)
+  }
+  return map
 })
+
+const calendarWeeks = computed(() => {
+  const firstOfMonth = new Date(viewYear.value, viewMonth.value, 1)
+  const startOffset = firstOfMonth.getDay() // 0=Sun
+  const gridStart = new Date(viewYear.value, viewMonth.value, 1 - startOffset)
+
+  const weeks = []
+  let cursor = new Date(gridStart)
+
+  for (let w = 0; w < 6; w++) {
+    const week = []
+    for (let d = 0; d < 7; d++) {
+      const dateObj = new Date(cursor)
+      const key = toDateKey(dateObj)
+      week.push({
+        key,
+        date: dateObj.getDate(),
+        inCurrentMonth: dateObj.getMonth() === viewMonth.value,
+        isToday: isSameDay(dateObj, today),
+        events: eventsByDate.value[key] || [],
+      })
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    weeks.push(week)
+    // stop after the week that covers the last day of the month, once we've completed a full row
+    if (cursor.getMonth() !== viewMonth.value && cursor > new Date(viewYear.value, viewMonth.value + 1, 0)) {
+      if (weeks.length >= 4) break
+    }
+  }
+  return weeks
+})
+
+// 7 days (Sun–Sat) of the week that contains `current`
+const weekDays = computed(() => {
+  const start = new Date(current.value)
+  start.setDate(start.getDate() - start.getDay())
+
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(start)
+    dt.setDate(start.getDate() + i)
+    const key = toDateKey(dt)
+    days.push({
+      key,
+      date: dt,
+      isToday: isSameDay(dt, today),
+      events: eventsByDate.value[key] || [],
+    })
+  }
+  return days
+})
+
+const weekLabel = computed(() => {
+  const start = weekDays.value[0].date
+  const end = weekDays.value[6].date
+  if (start.getMonth() === end.getMonth()) {
+    return `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getDate()}일`
+  }
+  return `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getMonth() + 1}월 ${end.getDate()}일`
+})
+
+// Flat, chronological list of all events matching the active category filter
+const listGroups = computed(() => {
+  const map = {}
+  for (const ev of filteredEvents.value) {
+    if (!map[ev.start]) map[ev.start] = []
+    map[ev.start].push(ev)
+  }
+  return Object.keys(map)
+    .sort()
+    .map((dateKey) => {
+      const d = new Date(dateKey)
+      return {
+        dateKey,
+        label: `${d.getMonth() + 1}월 ${d.getDate()}일`,
+        weekday: weekdays[d.getDay()],
+        events: map[dateKey],
+      }
+    })
+})
+
+/* ---------------- Sidebar: upcoming events ---------------- */
+const upcomingEvents = computed(() => {
+  const todayKey = toDateKey(today)
+  return filteredEvents.value
+    .filter((ev) => ev.end >= todayKey || ev.start >= todayKey)
+    .sort((a, b) => a.start.localeCompare(b.start))
+})
+
+function formatShortDate(dateStr) {
+  const [, m, d] = dateStr.split('-')
+  return `${m}.${d}`
+}
+
+function weekdayOf(dateStr) {
+  const d = new Date(dateStr)
+  return weekdays[d.getDay()]
+}
+
+function formatEventRange(ev) {
+  if (ev.time) return `${formatShortDate(ev.start)} ${ev.time}`
+  if (ev.start === ev.end) return formatShortDate(ev.start)
+  return `${formatShortDate(ev.start)} ~ ${formatShortDate(ev.end)}`
+}
 </script>
 
 <style scoped>
-.local-info-container {
+* { box-sizing: border-box; }
+
+.page {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1a1a1a;
+  background: #fff;
+  min-height: 100vh;
+}
+
+/* ---- Top nav ---- */
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 40px;
+  border-bottom: 1px solid #eee;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  color: #1a1a1a;
+}
+
+.brand-text {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  line-height: 1.3;
 }
 
-/* 필터 헤더 */
-.filter-header {
+.brand-text strong {
+  font-size: 18px;
+}
+
+.brand-text span {
+  font-size: 12px;
+  color: #9a9a9a;
+}
+
+.nav-tabs {
   display: flex;
-  justify-content: space-between;
+  gap: 32px;
+}
+
+.nav-tab {
+  display: flex;
   align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #9a9a9a;
+  cursor: pointer;
+  padding: 6px 2px;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-tab-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.nav-tab.active {
+  color: #1a1a1a;
+  font-weight: 600;
+  border-bottom-color: #1a1a1a;
+}
+
+/* ---- Content ---- */
+.content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 40px 80px;
+}
+
+.content-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.content-header p {
+  font-size: 14px;
+  color: #9a9a9a;
+  margin: 0 0 24px;
+}
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ---- Controls ---- */
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
   flex-wrap: wrap;
   gap: 12px;
-  border-bottom: 1.5px solid #f1f3f5;
-  padding-bottom: 16px;
 }
 
-.tag-filters {
+.controls-left {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.filter-btn {
-  background-color: #f1f3f5;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #495057;
+.btn-outline {
+  padding: 8px 14px;
+  font-size: 13px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
-.filter-btn:hover {
-  background-color: #e9ecef;
+.btn-outline:hover {
+  background: #f7f7f7;
 }
 
-.filter-btn.active {
-  background-color: #111;
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  color: #4a4a4a;
+}
+
+.btn-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-icon:hover {
+  background: #f7f7f7;
+}
+
+.month-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 8px 6px;
+}
+
+.chevron-down {
+  width: 16px;
+  height: 16px;
+  color: #9a9a9a;
+}
+
+.view-toggle {
+  display: flex;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  background: #fff;
+  border: none;
+  border-left: 1px solid #ddd;
+  color: #6a6a6a;
+  cursor: pointer;
+}
+
+.view-toggle-btn:first-child {
+  border-left: none;
+}
+
+.view-toggle-btn.active {
+  background: #1a1a1a;
   color: #fff;
 }
 
-.results-count {
-  font-size: 14px;
-  color: #868e96;
-  font-weight: 500;
+/* ---- Calendar grid ---- */
+.calendar-grid {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-/* 축제 카드 그리드 */
-.places-grid {
+.weekday-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(7, 1fr);
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.weekday {
+  text-align: center;
+  padding: 10px 0;
+  font-size: 13px;
+  color: #9a9a9a;
+  font-weight: 600;
+}
+
+.week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.week-row + .week-row {
+  border-top: 1px solid #e5e5e5;
+}
+
+.day-cell {
+  min-height: 110px;
+  padding: 10px;
+  border-left: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.day-cell:first-child {
+  border-left: none;
+}
+
+.day-cell.is-outside .day-number {
+  color: #ccc;
+}
+
+.day-number {
+  font-size: 14px;
+  font-weight: 600;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.day-number.today {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.event-chip {
+  background: #f0f0f0;
+  color: #4a4a4a;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+/* ---- Week view ---- */
+.week-weekday-row {
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.week-weekday-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+}
+
+.week-date-number {
+  font-size: 15px;
+  font-weight: 700;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.week-date-number.today {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.week-body-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  min-height: 360px;
+}
+
+.week-day-col {
+  border-left: 1px solid #e5e5e5;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.week-day-col:first-child {
+  border-left: none;
+}
+
+.week-empty {
+  font-size: 11px;
+  color: #ccc;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.week-event-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #f7f7f7;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.week-event-time {
+  font-size: 11px;
+  color: #6a6a6a;
+  font-weight: 600;
+}
+
+.week-event-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.week-event-location {
+  font-size: 11px;
+  color: #9a9a9a;
+}
+
+.week-event-tag {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+/* ---- List view ---- */
+.list-summary {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a4a4a;
+}
+
+.list-view {
+  padding: 8px 20px 20px;
+}
+
+.list-empty {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #bbb;
+}
+
+.list-group + .list-group {
+  margin-top: 20px;
+}
+
+.list-group-header {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 0 8px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
+.list-group-events {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-event-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.list-event-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-event-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.list-event-meta {
+  font-size: 12px;
+  color: #9a9a9a;
+  margin: 0;
+}
+
+/* ---- Status text (loading/error) ---- */
+.status-text {
+  font-size: 13px;
+  color: #9a9a9a;
+  margin: 0 0 12px;
+}
+
+.status-error {
+  color: #d9534f;
+}
+
+/* ---- Category filter ---- */
+.category-filter {
+  margin-top: 20px;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
 }
 
-.place-card {
-  background-color: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.place-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-}
-
-.card-image-placeholder {
-  background-color: #f8f9fa;
-  height: 140px;
+.filter-option {
   display: flex;
   align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4a4a4a;
+  cursor: pointer;
+}
+
+.filter-option input {
+  width: 15px;
+  height: 15px;
+  accent-color: #1a1a1a;
+  cursor: pointer;
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sidebar-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.link-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #9a9a9a;
+  cursor: pointer;
+}
+
+.link-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.upcoming-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upcoming-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.date-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  border-bottom: 1px solid #e9ecef;
+  min-width: 52px;
+  padding: 6px 4px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
 }
 
-.emoji-icon {
-  font-size: 48px;
-}
-
-.card-body {
-  padding: 16px;
-}
-
-.place-tag {
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 4px;
+.date-badge-day {
+  font-size: 13px;
   font-weight: 700;
 }
-/* 카테고리별 다채로운 배지 컬러 분기 */
-.place-tag.festival { color: #d9480f; background-color: #fff0f6; }
-.place-tag.culture { color: #2b8a3e; background-color: #e8f5e9; }
-.place-tag.sports { color: #1c7ed6; background-color: #e7f5ff; }
 
-.place-title {
-  font-size: 17px;
-  font-weight: 800;
-  margin: 10px 0 6px 0;
-  color: #212529;
-  line-height: 1.3;
+.date-badge-weekday {
+  font-size: 11px;
+  color: #9a9a9a;
 }
 
-.place-date {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e03131;
-  margin: 0 0 4px 0;
+.upcoming-body {
+  flex: 1;
+  min-width: 0;
 }
 
-.place-addr {
-  font-size: 12px;
-  color: #868e96;
-  margin: 0 0 10px 0;
-}
-
-.place-desc {
-  font-size: 13px;
-  color: #495057;
-  line-height: 1.4;
-  margin: 0 0 16px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.like-badge {
-  color: #495057;
-}
-
-.detail-btn-text {
-  color: #111;
-}
-
-/* 모달 스타일 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.modal-content {
-  background-color: #ffffff;
-  border-radius: 16px;
-  max-width: 500px;
-  width: 100%;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-  animation: modalShow 0.25s ease-out;
-}
-
-@keyframes modalShow {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.close-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: rgba(0, 0, 0, 0.4);
-  color: white;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-
-.modal-hero {
-  background-color: #e9ecef;
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-emoji {
-  font-size: 72px;
-}
-
-.modal-body {
-  padding: 24px;
-}
-
-.modal-body h2 {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 10px 0 16px 0;
-  line-height: 1.3;
-}
-
-.modal-addr, .modal-tel {
+.upcoming-title {
   font-size: 14px;
-  color: #495057;
-  margin: 6px 0;
+  font-weight: 700;
+  margin: 0 0 4px;
 }
 
-.divider {
-  border: 0;
-  border-top: 1px solid #dee2e6;
-  margin: 16px 0;
+.upcoming-meta {
+  font-size: 12px;
+  color: #9a9a9a;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.modal-desc {
-  font-size: 15px;
-  color: #343a40;
-  line-height: 1.6;
+.upcoming-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.category-tag {
+  font-size: 11px;
+  background: #f0f0f0;
+  color: #4a4a4a;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bookmark-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #bbb;
+  padding: 0;
+}
+
+.bookmark-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bookmark-btn.active {
+  color: #1a1a1a;
+}
+
+/* ---- Floating action button ---- */
+.fab {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.fab svg {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 960px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
