@@ -116,6 +116,15 @@ const regions = [
   { id: 'goryeong', label: '고령군' }
 ]
 
+const regionCenters = {
+  all: [36.1195, 128.3446],
+  gumi: [36.1195, 128.3446],
+  daegu: [35.8714, 128.6014],
+  chilgok: [35.9953, 128.4015],
+  seongju: [35.9193, 128.2838],
+  goryeong: [35.7264, 128.2620]
+}
+
 const places = ref([])
 const activeCategory = ref('all')
 const activeRegion = ref('all')
@@ -200,7 +209,14 @@ const filteredPlaces = computed(() => {
 })
 
 const setCategory = (id) => { activeCategory.value = id }
-const setRegion = (id) => { activeRegion.value = id }
+const setRegion = (id) => {
+  activeRegion.value = id
+
+  if (!map.value) return
+
+  const center = regionCenters[id] || regionCenters.all
+  map.value.flyTo(center, 13, { duration: 0.8 })
+}
 
 const updateMarkers = () => {
   if (!map.value || !markerGroup.value) return
@@ -235,10 +251,7 @@ placesToShow.forEach(place => {
 }
 
 const initMap = () => {
-  map.value = L.map('map').setView(
-  [36.1195, 128.3446], // 구미시청
-  13
-)
+  map.value = L.map('map').setView(regionCenters.all, 13)
 
   L.tileLayer(
     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
