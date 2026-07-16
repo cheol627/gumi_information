@@ -353,12 +353,12 @@ onMounted(() => { fetchPosts() })
 
 .search-input:focus {
   background: #fff;
-  border-color: #111;
+  border-color: #7c5cfc;
 }
 
 .write-top-btn {
   padding: 0 14px;
-  background: #111;
+  background: #7c5cfc;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -369,6 +369,11 @@ onMounted(() => { fetchPosts() })
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s;
+}
+
+.write-top-btn:hover {
+  background: #6a48e8;
 }
 
 .board-layout {
@@ -444,7 +449,7 @@ onMounted(() => { fetchPosts() })
 
 .rank-number {
   font-weight: bold;
-  color: #1a73e8;
+  color: #7c5cfc;
   width: 14px;
   text-align: center;
 }
@@ -483,10 +488,10 @@ onMounted(() => { fetchPosts() })
 /* 홍보 광고 배너 스타일 */
 .promo-banner {
   position: relative;
-  background: linear-gradient(135deg, #111111 0%, #2c3e50 100%);
+  background: linear-gradient(135deg, #3d2b7a 0%, #1a1030 100%);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(76, 39, 137, 0.25);
 }
 
 .promo-badge {
@@ -541,7 +546,7 @@ onMounted(() => { fetchPosts() })
   border: none;
   border-radius: 6px;
   background: #ffffff;
-  color: #111111;
+  color: #6a48e8;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -575,7 +580,7 @@ onMounted(() => { fetchPosts() })
 }
 
 .post-card.is-active {
-  border-color: #495057;
+  border-color: #7c5cfc;
 }
 
 .post-summary-row {
@@ -711,9 +716,9 @@ onMounted(() => { fetchPosts() })
 }
 
 .page-number-btn.active {
-  background-color: #111111;
+  background-color: #7c5cfc;
   color: #ffffff;
-  border-color: #111111;
+  border-color: #7c5cfc;
 }
 
 /* 모달 */
@@ -776,7 +781,7 @@ onMounted(() => { fetchPosts() })
 }
 
 .btn-primary {
-  background: #111;
+  background: #7c5cfc;
   color: #fff;
   border: none;
   padding: 6px 12px;
