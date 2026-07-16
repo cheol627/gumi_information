@@ -61,7 +61,7 @@
         <section class="full-section">
           <div class="section-header">
             <h2>💬 자유 소통 공간</h2>
-            <p>이웃 주민, 친구들과 편하게 이야기와 추천 명소 정보를 나누는 게시판입니다.</p>
+            <p>이웃 주민들과 편하게 이야기와 추천 명소 정보를 나누는 게시판입니다.</p>
           </div>
           <!-- 🌟 [수정] PostBoard에서 전달하는 open-chatbot 이벤트를 수신하여 기존 isChatOpen 변수를 true로 변경합니다. -->
           <PostBoard @open-chatbot="isChatOpen = true" />
@@ -388,7 +388,7 @@ const sendMessage = async () => {
   color: #111;
 }
 .nav-item.active {
-  border-bottom: 3px solid #111;
+  border-bottom: 3px solid #7c5cfc;
   color: #111;
   font-weight: 800;
 }

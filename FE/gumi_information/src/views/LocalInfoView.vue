@@ -46,7 +46,12 @@
           <!-- Month view -->
           <div v-if="viewMode === '월'" class="calendar-grid">
             <div class="weekday-row">
-              <span v-for="d in weekdays" :key="d" class="weekday">{{ d }}</span>
+              <span
+                v-for="(d, i) in weekdays"
+                :key="d"
+                class="weekday"
+                :class="{ 'weekday-sun': i === 0, 'weekday-sat': i === 6 }"
+              >{{ d }}</span>
             </div>
 
             <div class="weeks">
@@ -77,7 +82,10 @@
           <div v-else-if="viewMode === '주'" class="calendar-grid week-grid">
             <div class="weekday-row week-weekday-row">
               <div v-for="d in weekDays" :key="d.key" class="week-weekday-cell">
-                <span class="weekday">{{ weekdays[d.date.getDay()] }}</span>
+                <span
+                  class="weekday"
+                  :class="{ 'weekday-sun': d.date.getDay() === 0, 'weekday-sat': d.date.getDay() === 6 }"
+                >{{ weekdays[d.date.getDay()] }}</span>
                 <span class="week-date-number" :class="{ today: d.isToday }">{{ d.date.getDate() }}</span>
               </div>
             </div>
@@ -89,7 +97,7 @@
                   <span v-if="ev.time" class="week-event-time">{{ ev.time }}</span>
                   <span class="week-event-title">{{ ev.title }}</span>
                   <span class="week-event-location">{{ ev.location }}</span>
-                  <span class="category-tag week-event-tag">{{ ev.category }}</span>
+                  <span class="category-tag week-event-tag" :class="categoryClass(ev.category)">{{ ev.category }}</span>
                 </div>
               </div>
             </div>
@@ -102,7 +110,7 @@
               <div class="list-group-header">{{ group.label }} ({{ group.weekday }})</div>
               <div class="list-group-events">
                 <div v-for="ev in group.events" :key="ev.id" class="list-event-row">
-                  <span class="category-tag">{{ ev.category }}</span>
+                  <span class="category-tag" :class="categoryClass(ev.category)">{{ ev.category }}</span>
                   <div class="list-event-body">
                     <p class="list-event-title">{{ ev.title }}</p>
                     <p class="list-event-meta">{{ formatEventRange(ev) }} · {{ ev.location }}</p>
@@ -157,7 +165,7 @@
               </div>
 
               <div class="upcoming-actions">
-                <span class="category-tag">{{ ev.category }}</span>
+                <span class="category-tag" :class="categoryClass(ev.category)">{{ ev.category }}</span>
               </div>
             </li>
           </ul>
@@ -235,6 +243,18 @@ function toggleAll(e) {
 const filteredEvents = computed(() =>
   events.filter((ev) => selectedCategories.value.includes(ev.category))
 )
+
+const categoryClassMap = {
+  '축제': 'tag-festival',
+  '행사': 'tag-event',
+  '공연': 'tag-performance',
+  '전시': 'tag-exhibition',
+  '기타': 'tag-etc',
+}
+
+function categoryClass(category) {
+  return categoryClassMap[category] || 'tag-etc'
+}
 
 /* ---------------- Calendar state & helpers ---------------- */
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
@@ -394,6 +414,9 @@ function formatEventRange(ev) {
 * { box-sizing: border-box; }
 
 .page {
+  --brand-purple: #7c5cfc;
+  --brand-purple-dark: #6a48e8;
+  --brand-purple-bg: #f1ebff;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #1a1a1a;
   background: #fff;
@@ -605,6 +628,14 @@ function formatEventRange(ev) {
   font-weight: 600;
 }
 
+.weekday-sun {
+  color: #e03131;
+}
+
+.weekday-sat {
+  color: #1c7ed6;
+}
+
 .week-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -656,11 +687,12 @@ function formatEventRange(ev) {
 }
 
 .event-chip {
-  background: #f0f0f0;
-  color: #4a4a4a;
+  background: var(--brand-purple-bg);
+  color: var(--brand-purple-dark);
   font-size: 11px;
+  font-weight: 600;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -751,7 +783,8 @@ function formatEventRange(ev) {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  background: #f7f7f7;
+  background: #fff;
+  border: 1px solid #eee;
   border-radius: 6px;
   padding: 8px;
 }
@@ -763,9 +796,10 @@ function formatEventRange(ev) {
 }
 
 .week-event-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 800;
+  color: #111;
+  line-height: 1.3;
 }
 
 .week-event-location {
@@ -880,7 +914,7 @@ function formatEventRange(ev) {
 .filter-option input {
   width: 15px;
   height: 15px;
-  accent-color: #1a1a1a;
+  accent-color: var(--brand-purple);
   cursor: pointer;
 }
 
@@ -933,9 +967,11 @@ function formatEventRange(ev) {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  padding: 12px 0;
+}
+
+.upcoming-item + .upcoming-item {
+  border-top: 1px solid #f0f0f0;
 }
 
 .date-badge {
@@ -943,15 +979,13 @@ function formatEventRange(ev) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 52px;
-  padding: 6px 4px;
-  border: 1px solid #e5e5e5;
-  border-radius: 6px;
+  min-width: 44px;
 }
 
 .date-badge-day {
   font-size: 13px;
   font-weight: 700;
+  color: var(--brand-purple);
 }
 
 .date-badge-weekday {
@@ -988,11 +1022,37 @@ function formatEventRange(ev) {
 
 .category-tag {
   font-size: 11px;
+  font-weight: 600;
   background: #f0f0f0;
   color: #4a4a4a;
   padding: 3px 8px;
   border-radius: 999px;
   white-space: nowrap;
+}
+
+.category-tag.tag-festival {
+  background: var(--brand-purple-bg);
+  color: var(--brand-purple-dark);
+}
+
+.category-tag.tag-event {
+  background: #fff3d6;
+  color: #e8890c;
+}
+
+.category-tag.tag-performance {
+  background: #e7f5ff;
+  color: #1c7ed6;
+}
+
+.category-tag.tag-exhibition {
+  background: #e6fcf5;
+  color: #0ca678;
+}
+
+.category-tag.tag-etc {
+  background: #f1f3f5;
+  color: #868e96;
 }
 
 .bookmark-btn {
