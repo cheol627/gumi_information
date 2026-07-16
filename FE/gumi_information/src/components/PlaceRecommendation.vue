@@ -46,7 +46,7 @@ watch(
   async (newCategory) => {
 
     const { data } = await axios.get(
-      'http://localhost:8000/places'
+      'https://gumi-information.onrender.com/places'
     )
 
     // 관심사 선택 안 했을 때

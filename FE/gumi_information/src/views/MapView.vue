@@ -377,7 +377,7 @@ const loadReviewsForPlace = async (place) => {
   if (!identifier) return
 
   try {
-    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+    const API_BASE = import.meta.env.VITE_API_BASE || 'https://gumi-information.onrender.com'
     const res = await fetch(`${API_BASE}/places/${identifier}/reviews`)
     if (!res.ok) throw new Error(`리뷰 조회 실패: ${res.status}`)
 
@@ -395,7 +395,7 @@ const loadReviewsForPlaces = async () => {
 
 async function fetchPlaces() {
   try {
-    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+    const API_BASE = import.meta.env.VITE_API_BASE || 'https://gumi-information.onrender.com'
     const url = `${API_BASE}/places`
 
     const res = await fetch(url)
@@ -449,8 +449,9 @@ async function fetchPlaces() {
           area: p.areacode || '',
           regionKey: regionInfo?.key || null,
           regionLabel: regionInfo?.label || '',
-          rating: '0.0',
+          rating: p.avg_rating || 0,
           review: 0,
+          averageRating: p.avg_rating || 0,
           lat,
           lng,
           image: p.firstimage || p.firstimage2 || ''
@@ -458,7 +459,6 @@ async function fetchPlaces() {
       })
       .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))
 
-      await loadReviewsForPlaces()
       mapBounds.value = map.value.getBounds()
       updateMarkers()
     } catch (err) {
@@ -475,7 +475,7 @@ const submitReview = async () => {
   reviewSubmitting.value = true
 
   try {
-    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+    const API_BASE = import.meta.env.VITE_API_BASE || 'https://gumi-information.onrender.com'
     const placeId = getPlaceIdentifier(reviewTargetPlace.value)
     const res = await fetch(`${API_BASE}/places/${placeId}/reviews`, {
       method: 'POST',

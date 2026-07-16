@@ -96,7 +96,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
-const API_URL = 'http://localhost:8000/api/posts'
+const API_URL = 'https://gumi-information.onrender.com/api/posts'
 
 const searchQuery = ref('')
 const posts = ref([])
