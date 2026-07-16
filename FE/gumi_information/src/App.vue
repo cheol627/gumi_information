@@ -1,7 +1,7 @@
 <!-- src/App.vue -->
 <template>
   <div class="localhub-container" :class="{ 'bottom-nav-active': isMobile }">
-    <!-- 상단 네비게이션 (데스크톱 전용 / 모바일에서는 로고만 상단 표시) -->
+    <!-- 상단 네비게이션 (데스크톱: 메뉴 + 날씨 / 모바일: 로고 + 날씨) -->
     <header class="localhub-header">
       <div class="header-content">
         <!-- 로고 -->
@@ -13,18 +13,30 @@
           <span class="logo-sub">구미/경북 지역 정보 & 커뮤니티</span>
         </div>
         
-        <!-- 데스크톱 전용 메뉴 (CSS로 모바일에서 숨김 처리) -->
-        <nav class="nav-menu desktop-only">
-          <button 
-            v-for="menu in menus" 
-            :key="menu.id"
-            @click="currentMenu = menu.id"
-            :class="['nav-item', { active: currentMenu === menu.id }]"
-          >
-            <span class="menu-icon">{{ menu.icon }}</span>
-            <span class="menu-name">{{ menu.name }}</span>
-          </button>
-        </nav>
+        <!-- 우측 영역 (데스크톱: 메뉴 + 날씨 / 모바일: 날씨만 표시) -->
+        <div class="header-right">
+          <!-- 데스크톱 전용 메뉴 (CSS로 모바일에서 숨김 처리) -->
+          <nav class="nav-menu desktop-only">
+            <button 
+              v-for="menu in menus" 
+              :key="menu.id"
+              @click="currentMenu = menu.id"
+              :class="['nav-item', { active: currentMenu === menu.id }]"
+            >
+              <span class="menu-icon">{{ menu.icon }}</span>
+              <span class="menu-name">{{ menu.name }}</span>
+            </button>
+          </nav>
+
+          <!-- ☀️ 날씨 위젯 (데스크톱/모바일 공통 노출) -->
+          <div class="weather-widget" v-if="weather" :title="`${weather.temp}°C / ${weather.description}`">
+            <span class="weather-icon">{{ weather.icon }}</span>
+            <span class="weather-info">
+              <span class="weather-temp">{{ weather.temp }}°C</span>
+              <span class="weather-loc desktop-only">구미</span>
+            </span>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -202,6 +214,38 @@ const menus = [
   { id: 'community', name: '커뮤니티', icon: '💬' }
 ]
 
+// ☀️ 날씨 데이터 상태관리 및 fetch 로직
+const weather = ref({
+  temp: 23,
+  icon: '🌤️',
+  description: '대체로 맑음'
+})
+
+const fetchGumiWeather = async () => {
+  try {
+    // 실제 API 연동 시 아래 OpenWeatherMap API 키 및 엔드포인트를 사용해 활성화할 수 있습니다.
+    // const API_KEY = 'YOUR_OPENWEATHERMAP_API_KEY';
+    // const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Gumi,KR&appid=${API_KEY}&units=metric&lang=kr`);
+    // const data = await response.json();
+    // weather.value = {
+    //   temp: Math.round(data.main.temp),
+    //   icon: getWeatherIcon(data.weather[0].icon),
+    //   description: data.weather[0].description
+    // };
+  } catch (error) {
+    console.error('날씨 정보를 가져오는 데 실패했습니다:', error);
+  }
+}
+
+// OpenWeatherMap 아이콘 매핑 도우미 (필요 시 활성화)
+const getWeatherIcon = (iconCode) => {
+  const iconMap = {
+    '01': '☀️', '02': '⛅', '03': '☁️', '04': '☁️',
+    '09': '🌧️', '10': '🌦️', '11': '🌩️', '13': '❄️', '50': '🌫️'
+  };
+  return iconMap[iconCode.substring(0, 2)] || '☀️';
+}
+
 // 화면 해상도 체크 (모바일 여부 확인)
 const isMobile = ref(false)
 const checkMobile = () => {
@@ -211,6 +255,7 @@ const checkMobile = () => {
 onMounted(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
+  fetchGumiWeather() // 컴포넌트 마운트 시 날씨 조회
 })
 
 onUnmounted(() => {
@@ -405,6 +450,15 @@ const sendMessage = async () => {
   border-left: 1.5px solid #dee2e6;
   padding-left: 12px;
 }
+
+/* 헤더 우측 영역 컨테이너 (메뉴 + 날씨 포함) */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 100%;
+}
+
 .nav-menu {
   display: flex;
   height: 100%;
@@ -435,6 +489,39 @@ const sendMessage = async () => {
   color: #111;
   font-weight: 800;
 }
+
+/* ☀️ 날씨 위젯 디자인 */
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f1f3f5;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #e9ecef;
+  user-select: none;
+}
+.weather-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.weather-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.weather-temp {
+  font-size: 14px;
+  font-weight: 700;
+  color: #343a40;
+}
+.weather-loc {
+  font-size: 10px;
+  color: #868e96;
+  font-weight: 600;
+  margin-top: -2px;
+}
+
 .main-content {
   max-width: 1280px;
   margin: 0 auto;
@@ -681,7 +768,7 @@ const sendMessage = async () => {
   cursor: not-allowed;
 }
 
-/* 🍇 마이구 젤리 로딩 CSS */
+/* 🍇 마이구 웰컴 로딩 CSS */
 .gumi-loading-wrap {
   align-self: flex-start;
   display: flex;
@@ -786,7 +873,7 @@ const sendMessage = async () => {
   .header-content {
     padding: 0 16px;
     height: 100%;
-    justify-content: center; /* 로고 중앙 정렬 */
+    justify-content: space-between; /* 양 끝 정렬로 변경 (로고 <-> 날씨) */
   }
   .logo-text { 
     font-size: 18px; 
@@ -796,6 +883,18 @@ const sendMessage = async () => {
   }
   .logo-sub { 
     display: none; 
+  }
+  
+  /* 모바일 환경 날씨 위젯 세부 세팅 */
+  .weather-widget {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+  .weather-icon {
+    font-size: 16px;
+  }
+  .weather-temp {
+    font-size: 12px;
   }
 
   /* 모바일 본문 영역 여백 최소화 */

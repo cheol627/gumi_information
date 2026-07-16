@@ -506,6 +506,47 @@ const submitReview = async () => {
   }
 }
 
+// 📍 [추가된 로직] 사용자의 실제 GPS 위치를 가져와 지도를 이동시키는 함수
+const moveToCurrentLocation = () => {
+  if (!navigator.geolocation) {
+    alert('이 브라우저에서는 위치 서비스를 지원하지 않습니다.')
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude
+      const lng = position.coords.longitude
+
+      if (map.value) {
+        // 사용자 위치로 지도 부드럽게 이동 (줌 레벨: 14)
+        map.value.flyTo([lat, lng], 14, { duration: 1.0 })
+      }
+    },
+    (error) => {
+      console.error('위치 정보를 가져오는데 실패했습니다.', error)
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          alert('위치 권한 허용이 거부되었습니다. 브라우저 설정에서 권한을 확인해주세요.')
+          break
+        case error.POSITION_UNAVAILABLE:
+          alert('가져올 수 없는 현재 위치입니다.')
+          break
+        case error.TIMEOUT:
+          alert('위치 정보를 가져오는 요청이 만료되었습니다.')
+          break
+        default:
+          alert('위치 정보를 가져오는 중 알 수 없는 에러가 발생했습니다.')
+      }
+    },
+    {
+      enableHighAccuracy: true, // 배터리를 더 소모하더라도 정확한 위경도 수집
+      timeout: 10000,
+      maximumAge: 0
+    }
+  )
+}
+
 onMounted(() => {
   initMap()
   fetchPlaces()
@@ -574,7 +615,8 @@ watch(filteredPlaces, () => {
           </div>
           <div id="map" class="map-view"></div>
         </div>
-        <button class="current-location-button" type="button">
+        <!-- 📍 클릭 이벤트를 moveToCurrentLocation 함수에 매핑했습니다. -->
+        <button class="current-location-button" type="button" @click="moveToCurrentLocation">
           현재 위치로 이동
         </button>
       </div>
