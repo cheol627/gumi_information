@@ -124,7 +124,7 @@ import { ref, computed, onMounted, defineEmits } from 'vue'
 import axios from 'axios'
 import logoImg from '../assets/logo.svg' // App.vue와 같은 depth의 assets 폴더에서 로고 가져오기
 
-const API_URL = 'http://localhost:8000/api/posts'
+const API_URL = 'https://gumi-information.onrender.com/api/posts'
 
 // 부모 컴포넌트로 챗봇 열기 이벤트를 보내기 위한 설정
 const emit = defineEmits(['open-chatbot'])
